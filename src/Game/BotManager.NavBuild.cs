@@ -78,8 +78,13 @@ namespace DuckBots
 
             Vec2 tl = Level.current.topLeft;
             Vec2 br = Level.current.bottomRight;
+            // Над верхними блоками — строка воздуха. Раньше карта начиналась с верхнего
+            // края самых верхних блоков, крыша уровня в неё не попадала, и бот, забравшийся
+            // наверх, оставался без узла и без маршрута: на office04_8 это восемь
+            // срабатываний сторожа 25.09 и два 27.09.
+            float oy = tl.y - NavCell;
             int w = (int)((br.x - tl.x) / NavCell) + 2;
-            int h = (int)((br.y - tl.y) / NavCell) + 2;
+            int h = (int)((br.y - tl.y) / NavCell) + 3;
             if (w < 4 || h < 4 || w * h > 20000)
             {
                 // В первом кадре раунда границы уровня ещё не посчитаны и дают мусор
@@ -98,7 +103,7 @@ namespace DuckBots
             for (int y = 0; y < h; y++)
                 for (int x = 0; x < w; x++)
                     cells[y * w + x] = Classify(
-                        new Vec2(tl.x + (x + 0.5f) * NavCell, tl.y + (y + 0.5f) * NavCell));
+                        new Vec2(tl.x + (x + 0.5f) * NavCell, oy + (y + 0.5f) * NavCell));
 
             // Лежащая мина с выдернутой чекой — нажимная ловушка: наступил и сошёл —
             // взрыв, таймера у неё нет. Для маршрута это клетка смерти, как шипы: её
@@ -108,7 +113,7 @@ namespace DuckBots
                 Mine mine = t as Mine;
                 if (mine == null || mine._pin || mine.owner != null || mine.removeFromLevel) continue;
                 int mx = (int)Math.Floor((mine.x - tl.x) / NavCell);
-                int my = (int)Math.Floor((mine.y - tl.y) / NavCell);
+                int my = (int)Math.Floor((mine.y - oy) / NavCell);
                 if (mx >= 0 && my >= 0 && mx < w && my < h) cells[my * w + mx] = NavMap.Deadly;
             }
 
@@ -129,7 +134,7 @@ namespace DuckBots
                 panes++;
                 bool seen = true;
                 int x0 = (int)Math.Floor((win.left - tl.x) / NavCell), x1 = (int)Math.Floor((win.right - 1f - tl.x) / NavCell);
-                int y0 = (int)Math.Floor((win.top - tl.y) / NavCell), y1 = (int)Math.Floor((win.bottom - 1f - tl.y) / NavCell);
+                int y0 = (int)Math.Floor((win.top - oy) / NavCell), y1 = (int)Math.Floor((win.bottom - 1f - oy) / NavCell);
                 for (int gy = y0; gy <= y1; gy++)
                     for (int gx = x0; gx <= x1; gx++)
                     {
@@ -152,7 +157,7 @@ namespace DuckBots
                 return;
 
             NavMap nav = new NavMap();
-            nav.Build(cells, w, h, NavCell, tl.x, tl.y, glass);
+            nav.Build(cells, w, h, NavCell, tl.x, oy, glass);
 
             // Телепорты игра связывает сама: Teleporter.link — публичное поле с парой.
             int links = 0;
