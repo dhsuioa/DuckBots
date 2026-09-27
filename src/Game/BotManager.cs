@@ -179,6 +179,15 @@ namespace DuckBots
                         Watch(b, d);
                         Explain(b, d, m);
                     }
+                    else if (Level.current is HighlightLevel || Level.current is HighlightPlayback
+                        || Level.current is RockScoreboard)
+                    {
+                        // Хайлайты и табло пропускаются голосованием: нужен START от всех
+                        // участников, ботов тоже. Бот жмёт его в тот же кадр, что и человек:
+                        // табло принимает голоса, только когда в этом кадре START нажал живой
+                        // игрок, а Tick идёт до обновления уровня, так что кадр общий.
+                        if (Input.Pressed("START", "Any")) m = BotInput.START;
+                    }
                 }
 
                 b.input.SetMask(m);
