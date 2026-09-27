@@ -134,7 +134,6 @@ namespace DuckBots
             InputProfile ip = d.inputProfile;
             bool jumpDown = ip != null && ip.Down("JUMP");
             bool downDown = ip != null && ip.Down("DOWN");
-            bool human = tr.bot == null;
 
             // Телепорт: утка за один кадр оказалась далеко, а скорость это не объясняет.
             if (tr.seen)
@@ -151,7 +150,9 @@ namespace DuckBots
             }
 
             TraceHands(tr, d);
-            if (human) TraceSlide(tr, d);
+            // Подкаты ботов пишутся так же, как у человека: по ним видно, разбил ли
+            // бот стекло и как быстро шёл.
+            TraceSlide(tr, d);
 
             if (!tr.air)
             {
