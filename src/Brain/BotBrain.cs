@@ -50,6 +50,12 @@ namespace DuckBots
         public const int BackFrames = 24;      // дольше не отходим: сзади стена
         public const int ShootFrames = 40;     // столько стреляем, дальше — подкатом
         public const int SmashTries = 3;       // столько неудач подряд, дальше — сторож
+        // Подкат от выстрела. DodgeDelay — ручка силы для этапа 3: через сколько кадров
+        // бот замечает, что в него целятся.
+        public const int DodgeDelay = 2;
+        public const int DodgeAfter = 12;      // столько ещё лежать, когда целиться перестали
+        public const int DodgeMax = 90;        // дольше не лежим: в лежачего тоже целятся
+        public const int DodgeRest = 30;       // столько после этого не ложиться
 
         // Почему бот делает то, что делает: одна строка на ветку Think (why)
         // и одна на способ хода в MoveTo (how). Журнал печатает их при смене
@@ -99,6 +105,8 @@ namespace DuckBots
         public const string HowSmashBack = "отхожу от стекла";
         public const string HowSmashShoot = "стреляю в стекло";
         public const string HowSmashSlide = "бью стекло подкатом";
+        public const string HowDodgeRun = "разгон для подката: в меня целятся";
+        public const string HowDodge = "лежу в подкате: в меня целятся";
 
         // Чистая функция: на входе числа, на выходе маска кнопок. Никаких игровых типов.
         //
@@ -114,6 +122,7 @@ namespace DuckBots
             if (s.jumpRest > 0) s.jumpRest--;
             s.how = null;
             ushort m = Think(ref v, ref s);
+            m = Dodge(m, ref v, ref s);
             if (s.jumpHold > 0)
             {
                 m |= BotInput.JUMP;
@@ -140,6 +149,69 @@ namespace DuckBots
                 }
             }
             return m;
+        }
+
+        // Подкат от выстрела, поверх решения ветки. Утка в подкате — 11 пикселей высотой
+        // против 22 стоя (анимация groundSlide), и пуля стоящего стрелка проходит над ней;
+        // пригнуться на месте мало: присед — 16. Подкат начинается только на бегу,
+        // |hs| > 1, а пригнувшись утка уже не разгоняется. Начатый подкат держится, пока
+        // зажат DOWN: утка лежит, даже остановившись. Отсюда программа: в бота целятся —
+        // разогнаться, если стоит, туда, куда он и так шёл, и нажать DOWN; лежать, пока
+        // целятся, и ещё DodgeAfter кадров после. Дольше DodgeMax не лежать: в лежачего
+        // попадает такой же лежачий, а бот без ствола пролежал бы весь раунд.
+        private static ushort Dodge(ushort m, ref BotView v, ref BotState s)
+        {
+            s.threatFrames = v.threatened ? s.threatFrames + 1 : 0;
+            if (s.dodgeRest > 0) s.dodgeRest--;
+            bool aimed = s.threatFrames > DodgeDelay;
+            // Только с земли; от взрывчатки бегут, а не ложатся.
+            if (!v.grounded || s.mode == Flee || v.netted)
+            {
+                EndDodge(ref s);
+                return m;
+            }
+            if (s.dodgeFrames == 0)
+            {
+                if (!aimed || s.dodgeRest > 0) return m;
+                s.dodgeDir = 0;
+            }
+            s.dodgeFrames++;
+            if (aimed) s.dodgeLeft = DodgeAfter;
+            else if (--s.dodgeLeft <= 0) { EndDodge(ref s); return m; }
+            if (s.dodgeFrames > DodgeMax) { EndDodge(ref s); s.dodgeRest = DodgeRest; return m; }
+
+            // Стоим: разгон туда, куда бот и так шёл, иначе к стрелку — не прочь от цели.
+            bool down = v.sliding || Math.Abs(v.hs) > 1f;
+            if (!down && s.dodgeDir == 0)
+            {
+                int dir = (m & BotInput.RIGHT) != 0 ? 1 : (m & BotInput.LEFT) != 0 ? -1 : (v.threatDx > 0f ? 1 : -1);
+                if (Abyss(ref v, dir)) dir = -dir;
+                if (Abyss(ref v, dir)) { EndDodge(ref s); s.dodgeRest = DodgeRest; return m; }   // разгоняться некуда
+                s.dodgeDir = dir;
+            }
+            // Уклоняемся — не прыгаем: прыжок, начатый веткой в этом кадре, отменяется. И
+            // лежачий бот не застрял, он не двигается нарочно: иначе MoveTo через дюжину
+            // кадров командовал «упёрся: прыжок» и поднимал его под пулю.
+            s.jumpHold = 0;
+            s.progAt = 0;
+            s.stuckFrames = 0;
+            // Уже лежим или бежим достаточно быстро — DOWN. Направление оставляем ветке:
+            // пригнувшись, утка не разгоняется, но поворачивается к врагу, чтобы стрелять.
+            if (down)
+            {
+                s.how = HowDodge;
+                return (ushort)((m & unchecked((ushort)~BotInput.JUMP)) | BotInput.DOWN);
+            }
+            s.how = HowDodgeRun;
+            return (ushort)((m & unchecked((ushort)~(BotInput.LEFT | BotInput.RIGHT | BotInput.JUMP | BotInput.DOWN)))
+                | (s.dodgeDir > 0 ? BotInput.RIGHT : BotInput.LEFT));
+        }
+
+        private static void EndDodge(ref BotState s)
+        {
+            s.dodgeFrames = 0;
+            s.dodgeDir = 0;
+            s.dodgeLeft = 0;
         }
 
         // Начать программу прыжка: кнопка прыжка перед этим должна побыть отпущенной,

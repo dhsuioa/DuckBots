@@ -201,6 +201,11 @@ namespace DuckBots
         // секунды не жмёт ни одной кнопки: строка и запись самописца.
         private static void Explain(Bot b, Duck d, ushort m)
         {
+            // Начало уклонения — строка: как часто боты ложатся под прицелом и от кого.
+            bool dodging = b.state.how == BotBrain.HowDodge || b.state.how == BotBrain.HowDodgeRun;
+            if (dodging && !b.dodging)
+                Log(BotName(b) + ": ухожу подкатом, стрелок " + (int)b.view.threatDx + " — " + Context(b, d));
+            b.dodging = dodging;
             if (b.state.mode != b.lastMode)
             {
                 Log(BotName(b) + ": режим " + (b.lastMode < 0 ? "старт" : BotBrain.modeNames[b.lastMode])

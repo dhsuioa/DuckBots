@@ -862,7 +862,7 @@ namespace DuckBots
                 v.grounded = false;   // оторвалась
             }
 
-            return GlassTest();
+            return GlassTest() ?? DodgeTest();
         }
     }
 }

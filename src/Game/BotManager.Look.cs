@@ -22,6 +22,7 @@ namespace DuckBots
 
         private const float FootProbe = 14f;   // на шаг вперёд от центра утки
         private const float GlassSee = 64f;    // стекло дальше этого для удара не в счёт
+        private const float ThreatRange = 200f; // дальше этого прицел врага не повод ложиться
         private const float FootDepth = 34f;   // глубже — уже яма, а не ступенька
 
         // isFatal игра ставит сама: у саксофона, трубы, тромбона и кейтара он false.
@@ -170,6 +171,14 @@ namespace DuckBots
             string how = b.state.how;
             b.glass = how == BotBrain.HowSmashShoot || how == BotBrain.HowSmashSlide || how == BotBrain.HowSmashBack
                 ? near : null;
+
+            v.sliding = me.sliding;
+            Duck shooter = Aiming(me);
+            if (shooter != null)
+            {
+                v.threatened = true;
+                v.threatDx = shooter.x - me.x;
+            }
 
             // С сеткомётом или с пойманным на руках враг в сетке — не цель: второй сеткой
             // его не поймать, а тот, что на руках, и так наш. Со смертельным стволом —
@@ -365,6 +374,32 @@ namespace DuckBots
                 float ddy = d.y - me.y;
                 float dist = ddx * ddx + ddy * ddy;
                 if (best == null || dist < bestDist) { best = d; bestDist = dist; }
+            }
+            return best;
+        }
+
+        // Кто целится в бота: в руках ствол, стреляющий по прямой, смотрит в его сторону,
+        // та же высота (пуля летит горизонтально), в пределах выстрела и чистая линия —
+        // та же пара проверок, что мозг делает для своего выстрела, только наоборот.
+        // Ближайший такой стрелок — повод уйти подкатом.
+        private static Duck Aiming(Duck me)
+        {
+            Duck best = null;
+            float bestDx = 0f;
+            foreach (Thing t in Level.current.things[typeof(Duck)])
+            {
+                Duck e = t as Duck;
+                if (e == null || e == me || e.dead || e.destroyed || e.removeFromLevel || e.ragdoll != null) continue;
+                Gun g = e.holdObject as Gun;
+                if (g == null || !Usable(g) || IsMelee(g) || g is Grenade || g is Mine || g is NetGun) continue;
+                float dx = me.x - e.x;
+                if (Math.Abs(dx) > ThreatRange || Math.Abs(me.y - e.y) >= BotBrain.SameLevelY) continue;
+                if ((dx > 0f) != (e.offDir > 0)) continue;                   // смотрит не на бота
+                if (Level.CheckLine<Block>(e.position, me.position) != null) continue;
+                if (Level.CheckRay<Duck>(e.position + new Vec2(dx > 0f ? 10f : -10f, 0f), me.position) != me) continue;
+                if (best != null && Math.Abs(dx) >= Math.Abs(bestDx)) continue;
+                best = e;
+                bestDx = dx;
             }
             return best;
         }

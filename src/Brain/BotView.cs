@@ -61,6 +61,10 @@ namespace DuckBots
         public bool hasGlass;
         public float glassDx;
         public bool glassGun;       // в руках ствол, которым стекло можно разбить вблизи
+        // Враг целится в бота: ствол, смотрит на него, та же высота, чистая линия.
+        public bool threatened;
+        public float threatDx;      // где стрелок, относительно бота
+        public bool sliding;        // утка в подкате: лежит, пока зажат DOWN
     }
 
     // Что бот помнит между кадрами. Только счётчики: решение принимается заново каждый кадр.
@@ -92,5 +96,12 @@ namespace DuckBots
         public bool smashRun;          // отход кончился, бьём
         public int smashFrames;        // кадров в нынешней фазе
         public int smashTries;         // неудачных попыток подряд
+
+        // Подкат от выстрела: разогнаться, лечь и лежать, пока в бота целятся.
+        public int threatFrames;       // сколько кадров подряд в бота целятся
+        public int dodgeFrames;        // сколько кадров уклонение уже идёт; 0 — не идёт
+        public int dodgeDir;           // куда разгоняемся перед подкатом
+        public int dodgeLeft;          // сколько ещё лежать, если целиться перестали
+        public int dodgeRest;          // сколько ещё кадров не ложиться после долгого лежания
     }
 }
