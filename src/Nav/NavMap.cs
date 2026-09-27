@@ -20,7 +20,12 @@ namespace DuckBots
     {
         public const byte Empty = 0, Solid = 1, Platform = 2, Deadly = 3;
         public const byte SpringUp = 4, SpringLeft = 5, SpringRight = 6;
-        public const int Walk = 0, Jump = 1, Drop = 2, Launch = 3;
+        public const int Walk = 0, Jump = 1, Drop = 2, Launch = 3, Smash = 4;
+
+        // Ручка силы для этапа 3: во сколько пикселей пути бот ценит удар по стеклу —
+        // отойти, разогнаться, подкатиться, около шести клеток ходьбы. Чем больше,
+        // тем охотнее он обходит стекло, а не бьёт его.
+        public const float SmashExtra = 96f;
 
         // Пружина даёт vSpeed = -22 против -4.9 у прыжка, то есть 1210 пикселей
         // подъёма вместо шестидесяти. Ограничиваем разумным коробом: выше потолка
@@ -29,6 +34,7 @@ namespace DuckBots
         private const int LaunchSide = 10;
 
         private byte[] _cells;
+        private bool[] _glass;     // стена, которую можно разбить: вертикальное стекло
         private int _w, _h;
         private float _cell, _originX, _originY;
         private int[] _node;       // клетка -> номер узла, -1 если стоять нельзя
@@ -65,9 +71,10 @@ namespace DuckBots
         public int CellCol(int node) { return _nodeCell[node] % _w; }
         public int CellRow(int node) { return _nodeCell[node] / _w; }
 
-        public void Build(byte[] cells, int w, int h, float cellSize, float originX, float originY)
+        public void Build(byte[] cells, int w, int h, float cellSize, float originX, float originY,
+                          bool[] glass = null)
         {
-            _cells = cells; _w = w; _h = h; _cell = cellSize;
+            _cells = cells; _glass = glass; _w = w; _h = h; _cell = cellSize;
             _originX = originX; _originY = originY;
             _links = 0;
 
@@ -176,6 +183,25 @@ namespace DuckBots
             return _node[y * _w + x];
         }
 
+        private bool IsGlass(int x, int y)
+        {
+            return _glass != null && x >= 0 && y >= 0 && x < _w && y < _h && _glass[y * _w + x];
+        }
+
+        // Где встанет утка, вошедшая в столбец x на высоте y: в этой клетке или на
+        // первой опоре ниже. Стена или смерть по дороге — встать негде.
+        private int Landing(int x, int y)
+        {
+            for (int cy = y; cy < _h; cy++)
+            {
+                byte c = At(x, cy);
+                if (c == Solid || c == Deadly) return -1;
+                int node = NodeAt(x, cy);
+                if (node >= 0) return node;
+            }
+            return -1;
+        }
+
         public float CellX(int node) { return _originX + (_nodeCell[node] % _w + 0.5f) * _cell; }
         public float CellY(int node) { return _originY + (_nodeCell[node] / _w + 0.5f) * _cell; }
 
@@ -259,6 +285,13 @@ namespace DuckBots
                         int landed = NodeAt(x + d, cy);
                         if (landed >= 0) { _nb[n] = landed; _nbEdge[n] = Walk; _nbProg[n] = 0; n++; break; }
                     }
+                }
+                else if (IsGlass(x + d, y) && (IsGlass(x + d, y - 1) || At(x + d, y - 1) != Solid))
+                {
+                    // Стекло сбоку: шагом его не разбить, а подкатом с разгона или пулей —
+                    // можно. Ребро ведёт за стекло, туда, где утка встанет, пройдя проём.
+                    int beyond = Landing(x + 2 * d, y);
+                    if (beyond >= 0) { _nb[n] = beyond; _nbEdge[n] = Smash; _nbProg[n] = 0; n++; }
                 }
             }
 

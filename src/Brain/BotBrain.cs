@@ -41,6 +41,15 @@ namespace DuckBots
         public const float GrabR = 16f;        // зона подбора: в игре круг 18 вокруг точки на 4 ниже центра
         public const float FarJump = 48f;      // дальше этого прыжок держим до упора при любом подъёме
         public const float AlignTol = 2f;      // прыжок по программе — не дальше этого от центра клетки
+        // Стекло поперёк маршрута. Зазор меряется от бока утки до бока стекла.
+        public const float GlassReach = DuckPhysics.HalfWidth + 3f;   // полуширины утки и стекла
+        public const float RunUp = 32f;        // отход для разбега: к SlideGap утка уже на полной 2.85
+        public const float SlideGap = 16f;     // отсюда подкат долетает до стекла
+        public const float ShootMin = 16f;     // ближе ствол упирается в стекло и задирается вверх
+        public const float ShootFrom = 24f;    // до этого зазора отходим, чтобы стрелять
+        public const int BackFrames = 24;      // дольше не отходим: сзади стена
+        public const int ShootFrames = 40;     // столько стреляем, дальше — подкатом
+        public const int SmashTries = 3;       // столько неудач подряд, дальше — сторож
 
         // Почему бот делает то, что делает: одна строка на ветку Think (why)
         // и одна на способ хода в MoveTo (how). Журнал печатает их при смене
@@ -87,6 +96,9 @@ namespace DuckBots
         public const string HowAbyss = "стою: впереди пропасть";
         public const string HowHere = "на месте";
         public const string HowAlign = "встаю в центр клетки перед прыжком";
+        public const string HowSmashBack = "отхожу от стекла";
+        public const string HowSmashShoot = "стреляю в стекло";
+        public const string HowSmashSlide = "бью стекло подкатом";
 
         // Чистая функция: на входе числа, на выходе маска кнопок. Никаких игровых типов.
         //
@@ -450,6 +462,77 @@ namespace DuckBots
             return s.wanderDir > 0 ? BotInput.RIGHT : BotInput.LEFT;
         }
 
+        // Стекло поперёк маршрута. Шагом его не разбить: пуля бьёт стекло всегда, а
+        // телом — только подкат с разгона (человек 25.09 разбил так восемь стёкол на
+        // скорости 2.2–3.0). Это программа на несколько кадров, как прыжок: отойти,
+        // потом выстрелить или разогнаться и подкатиться. Держится она на целом
+        // стекле, а не на шаге «стекло»: маршрут пересчитывается раз в десять кадров
+        // от той клетки, куда бот отошёл, и шаг сам меняется на «к стеклу».
+        private static bool Smash(float dx, int edge, bool routed, ref BotView v, ref BotState s, out ushort m)
+        {
+            m = 0;
+            int dir = dx > 1f ? 1 : (dx < -1f ? -1 : 0);
+            bool ahead = routed && dir != 0 && v.hasGlass && (v.glassDx > 0f) == (dir > 0);
+            if (!ahead)
+            {
+                // Разбито или маршрут повернул: программа кончилась.
+                s.smashDir = 0; s.smashRun = false; s.smashFrames = 0; s.smashTries = 0;
+                return false;
+            }
+            if (s.smashTries >= SmashTries) return false;        // не выходит — дальше сторож
+            if (s.smashDir != dir)
+            {
+                if (edge != NavMap.Smash) return false;          // начинает только шаг «стекло»
+                s.smashDir = dir; s.smashRun = false; s.smashFrames = 0;
+            }
+            s.smashFrames++;
+            s.stuckFrames = 0;
+            float gap = Math.Abs(v.glassDx) - GlassReach;
+            ushort toward = dir > 0 ? BotInput.RIGHT : BotInput.LEFT;
+            ushort away = dir > 0 ? BotInput.LEFT : BotInput.RIGHT;
+            bool room = dir > 0 ? !v.gapLeft : !v.gapRight;     // сзади есть куда отойти
+            bool shoot = v.glassGun && s.smashTries == 0;        // первая попытка — пулей
+            if (!s.smashRun)
+            {
+                if (gap < (shoot ? ShootFrom : RunUp) && room && s.smashFrames < BackFrames)
+                {
+                    s.how = HowSmashBack;
+                    m = away;
+                    return true;
+                }
+                s.smashRun = true;
+                s.smashFrames = 0;
+            }
+            if (shoot)
+            {
+                // Вплотную ствол задирается вверх, а не вышло за ShootFrames — пуля не
+                // берёт или кончилась: дальше подкатом.
+                if (gap < ShootMin || s.smashFrames > ShootFrames)
+                {
+                    s.smashTries++; s.smashRun = false; s.smashFrames = 0;
+                    s.how = HowSmashBack;
+                    return true;
+                }
+                s.how = HowSmashShoot;
+                if (v.facingRight != (dir > 0)) { m = toward; return true; }
+                if (Pulse(ref s.shootTimer, ShootHold, ShootGap)) m = BotInput.SHOOT;
+                return true;
+            }
+            s.how = HowSmashSlide;
+            float speed = v.hs * dir;
+            if (s.smashFrames > 20 && gap < SlideGap && speed < 0.5f)
+            {
+                // Подкатился, а стекло цело: ещё раз с разбега.
+                s.smashTries++; s.smashRun = false; s.smashFrames = 0;
+                return true;
+            }
+            // Порог 1 — порог подката в самой игре: начавшись на полной скорости, подкат
+            // гаснет медленно, и выше порог отпускал бы DOWN посреди него.
+            m = toward;
+            if (gap <= SlideGap && speed > 1f) m |= BotInput.DOWN;
+            return true;
+        }
+
         // Идти к цели. Когда есть маршрут, он прямо говорит, что делать на этом шаге:
         // пройти, прыгнуть или провалиться сквозь платформу. Когда маршрута нет
         // (граф не построен или цель недостижима), работают прежние догадки —
@@ -457,6 +540,9 @@ namespace DuckBots
         private static ushort MoveTo(float dx, float dy, int edge, bool routed, int prog,
                                      ref BotView v, ref BotState s)
         {
+            ushort smash;
+            if (Smash(dx, edge, routed, ref v, ref s, out smash)) return smash;
+
             bool wantUp = dy < -VertStep;
             bool wantDown = dy > DropBelow;
 

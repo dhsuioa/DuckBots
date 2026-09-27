@@ -86,7 +86,7 @@ namespace DuckBots
             return false;
         }
 
-        // Карта картинкой для журнала: # стена, = платформа, ^ смерть, S < >
+        // Карта картинкой для журнала: # стена, | стекло, = платформа, ^ смерть, S < >
         // пружины, o узел, T телепорт, . пусто. Сверху линейка колонок (десятки и
         // единицы), слева номер строки — по ним пиксели из любой строки журнала
         // переводятся в клетку: (x − начало) / 16.
@@ -104,7 +104,7 @@ namespace DuckBots
                     int i = y * _w + x;
                     byte c = _cells[i];
                     char ch = '.';
-                    if (c == Solid) ch = '#';
+                    if (c == Solid) ch = IsGlass(x, y) ? '|' : '#';
                     else if (c == Platform) ch = '=';
                     else if (c == Deadly) ch = '^';
                     else if (c == SpringUp) ch = 'S';
@@ -181,8 +181,10 @@ namespace DuckBots
                     // Прыжок дороже шага: при равной длине бот выберет пройти ногами.
                     // Прыжок со взмахами — ещё дороже: полёт длинный, ошибиться проще.
                     // Полёт пружиной дешевле всего — она делает работу за него.
+                    // Стекло — дороже всего: отойти, разогнаться и подкатиться.
                     float extra = _nbEdge[i] == Jump ? (ProgHover(_nbProg[i]) > 0 ? _cell * 3f : _cell)
-                                : (_nbEdge[i] == Launch ? -_cell * 0.5f : 0f);
+                                : _nbEdge[i] == Launch ? -_cell * 0.5f
+                                : _nbEdge[i] == Smash ? SmashExtra : 0f;
                     float step = Dist(current, next) + extra;
                     if (step < 0f) step = 0f;
                     float g = _g[current] + step;

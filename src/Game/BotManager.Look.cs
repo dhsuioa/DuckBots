@@ -21,6 +21,7 @@ namespace DuckBots
         private static readonly Predicate<Thing> _freePresent = IsFreePresent;
 
         private const float FootProbe = 14f;   // на шаг вперёд от центра утки
+        private const float GlassSee = 64f;    // стекло дальше этого для удара не в счёт
         private const float FootDepth = 34f;   // глубже — уже яма, а не ступенька
 
         // isFatal игра ставит сама: у саксофона, трубы, тромбона и кейтара он false.
@@ -59,6 +60,14 @@ namespace DuckBots
         {
             return g is Sword || g is EnergyScimitar || g is OldEnergyScimi || g is TapedSword
                 || g is Chainsaw || g is SledgeHammer || g is BoxingGloves;
+        }
+
+        // Бьёт не пулей по прямой: взрыв, огонь или луч под углом. Стекло в двух шагах
+        // таким не разбивают — достанется себе.
+        private static bool Blasts(Gun g)
+        {
+            return g is Bazooka || g is GrenadeLauncher || g is GrenadeCannon || g is RomanCandle
+                || g is FlareGun || g is FlameThrower || g is LaserRifle;
         }
 
         private static bool IsFreePresent(Thing t)
@@ -139,6 +148,29 @@ namespace DuckBots
                     && (_nav == null || !_nav.SafeBelow(me.x, me.bottom + 3f + NavCell));
             }
 
+            // Целое вертикальное стекло по сторонам на высоте утки. Маршрут ведёт сквозь
+            // стекло ребром «стекло», а мозгу нужно знать, далеко ли оно и цело ли ещё.
+            // Разбилось то, по которому бот бил в прошлом кадре, — строка в журнал: по ней
+            // видно, что умение работает, и каким способом.
+            Window near = null;
+            foreach (Thing t in Level.current.things[typeof(Window)])
+            {
+                Window w = t as Window;
+                if (w == null || w.floor || w.bars.value || w.destroyed || w.removeFromLevel) continue;
+                if (w.bottom <= me.top || w.top >= me.bottom) continue;
+                float wdx = w.x - me.x;
+                if (Math.Abs(wdx) > GlassSee || (near != null && Math.Abs(wdx) >= Math.Abs(v.glassDx))) continue;
+                near = w;
+                v.glassDx = wdx;
+            }
+            v.hasGlass = near != null;
+            if (b.glass != null && b.glass != near && (b.glass.destroyed || b.glass.removeFromLevel))
+                Log(BotName(b) + ": стекло разбито в " + (int)b.glass.x + "," + (int)b.glass.y
+                    + " — " + (b.state.how ?? "-"));
+            string how = b.state.how;
+            b.glass = how == BotBrain.HowSmashShoot || how == BotBrain.HowSmashSlide || how == BotBrain.HowSmashBack
+                ? near : null;
+
             // С сеткомётом или с пойманным на руках враг в сетке — не цель: второй сеткой
             // его не поймать, а тот, что на руках, и так наш. Со смертельным стволом —
             // цель: пуля убивает и пойманного.
@@ -173,6 +205,8 @@ namespace DuckBots
                 v.holding = Usable(held) ? 1 : 2;
                 v.meleeInHand = IsMelee(held);
                 v.netGun = held is NetGun && v.holding == 1;
+                v.glassGun = v.holding == 1 && !v.meleeInHand && !v.explosiveInHand
+                    && !(held is NetGun) && !Blasts(held);
             }
             else if (me.holdObject != null)
             {

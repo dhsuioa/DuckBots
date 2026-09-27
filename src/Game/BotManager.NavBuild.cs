@@ -112,6 +112,36 @@ namespace DuckBots
                 if (mx >= 0 && my >= 0 && mx < w && my < h) cells[my * w + mx] = NavMap.Deadly;
             }
 
+            // Стекло. Вертикальное окно — стойка 6 пикселей в центре тайла, а сетка карты
+            // сдвинута от тайлов на 0–5 пикселей: начало карты — левый край самой левой
+            // вещи уровня. Центр клетки попадает в стекло только при сдвиге до трёх (так
+            // на city11 и office04_8), а при сдвиге 4–5 (forest13, office21_8 и другие
+            // 25.09) стекла для карты не было вовсе, и маршрут шёл сквозь него. Поэтому
+            // стекло размечается по боксу: для физики это стена, а маршрут может его
+            // разбить. Решётку пуля и подкат не берут, горизонтальное стекло не мешает
+            // ходить — их не трогаем.
+            bool[] glass = new bool[w * h];
+            int panes = 0, unseen = 0;
+            foreach (Thing t in Level.current.things[typeof(Window)])
+            {
+                Window win = t as Window;
+                if (win == null || win.floor || win.bars.value || win.destroyed || win.removeFromLevel) continue;
+                panes++;
+                bool seen = true;
+                int x0 = (int)Math.Floor((win.left - tl.x) / NavCell), x1 = (int)Math.Floor((win.right - 1f - tl.x) / NavCell);
+                int y0 = (int)Math.Floor((win.top - tl.y) / NavCell), y1 = (int)Math.Floor((win.bottom - 1f - tl.y) / NavCell);
+                for (int gy = y0; gy <= y1; gy++)
+                    for (int gx = x0; gx <= x1; gx++)
+                    {
+                        if (gx < 0 || gy < 0 || gx >= w || gy >= h) continue;
+                        int i = gy * w + gx;
+                        if (cells[i] != NavMap.Solid) seen = false;
+                        cells[i] = NavMap.Solid;
+                        glass[i] = true;
+                    }
+                if (!seen) unseen++;
+            }
+
             // Клетки те же — карта та же: прыжки теперь симулируются, и сборка стоит
             // десятки миллисекунд. Пересобираем только первый раз и когда уровень
             // изменился — взорвали пол, упала мина, поехал лифт.
@@ -122,7 +152,7 @@ namespace DuckBots
                 return;
 
             NavMap nav = new NavMap();
-            nav.Build(cells, w, h, NavCell, tl.x, tl.y);
+            nav.Build(cells, w, h, NavCell, tl.x, tl.y, glass);
 
             // Телепорты игра связывает сама: Teleporter.link — публичное поле с парой.
             int links = 0;
@@ -143,7 +173,7 @@ namespace DuckBots
             {
                 _navReported = true;
                 Log("мир: карта проходимости " + w + "x" + h + " клеток, узлов " + nav.nodeCount
-                    + ", телепортов " + links);
+                    + ", телепортов " + links + ", стёкол " + panes + ", из них мимо центров клеток " + unseen);
                 DumpMap(nav, "первая сборка");
             }
             else if (before != null && before.width == w && before.height == h)
@@ -197,7 +227,7 @@ namespace DuckBots
         {
             Detail("карта: " + why + " уровень=" + MapName(Level.current) + " клеток=" + nav.width + "x"
                 + nav.height + " узлов=" + nav.nodeCount + " начало=" + (int)nav.originX + ","
-                + (int)nav.originY + " клетка=16 — # стена, = платформа, ^ смерть, S < > пружины,"
+                + (int)nav.originY + " клетка=16 — # стена, | стекло, = платформа, ^ смерть, S < > пружины,"
                 + " o узел, T телепорт, . пусто");
             _mapRows.Clear();
             nav.Render(_mapRows);

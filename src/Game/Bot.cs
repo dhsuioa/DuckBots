@@ -91,6 +91,7 @@ namespace DuckBots
         public BotState state;   // счётчики мозга, живут между кадрами
         public BotView view;     // последняя обстановка, её же пишем в лог и рисуем над уткой
         public readonly SkipList skip = new SkipList();   // цели, забытые сторожем
+        public Window glass;                               // стекло, по которому бот бил в прошлом кадре
         public Thing pickup;                                // за чем бот сейчас идёт
         public int pickupNode = -1;                         // узел, куда за ней идти
         public Thing danger;                                // от чего бежит: в журнал

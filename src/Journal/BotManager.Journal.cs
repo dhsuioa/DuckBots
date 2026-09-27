@@ -313,6 +313,7 @@ namespace DuckBots
             if (edge == NavMap.Jump) return "прыжок";
             if (edge == NavMap.Launch) return "пружина";
             if (edge == NavMap.Drop) return "вниз";
+            if (edge == NavMap.Smash) return "стекло";
             return "шаг";
         }
 
