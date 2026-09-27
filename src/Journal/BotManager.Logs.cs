@@ -28,8 +28,21 @@ namespace DuckBots
 
         public static void OpenLogs(string dir)
         {
-            _mainLog = OpenLog(Path.Combine(dir, "botlog.txt"));
-            _detailLog = OpenLog(Path.Combine(dir, "botlog-detail.txt"));
+            string main = Path.Combine(dir, "botlog.txt"), detail = Path.Combine(dir, "botlog-detail.txt");
+            // Журналы прошлого матча не затирать: игру перезапускают после каждой сборки,
+            // и журнал матча 27.09 пропал, не дождавшись разбора. Пустой запуск (меньше
+            // 16 КБ) старую копию не трогает.
+            try
+            {
+                if (File.Exists(main) && new FileInfo(main).Length > 16384)
+                {
+                    File.Copy(main, Path.Combine(dir, "botlog.prev.txt"), true);
+                    if (File.Exists(detail)) File.Copy(detail, Path.Combine(dir, "botlog-detail.prev.txt"), true);
+                }
+            }
+            catch (Exception) { }
+            _mainLog = OpenLog(main);
+            _detailLog = OpenLog(detail);
             string head = "--- запуск " + DateTime.Now + " ---";
             if (_mainLog != null) _mainLog.WriteLine(head);
             if (_detailLog != null) _detailLog.WriteLine(head);

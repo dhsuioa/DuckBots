@@ -175,6 +175,7 @@ namespace DuckBots
                 Log("мир: карта проходимости " + w + "x" + h + " клеток, узлов " + nav.nodeCount
                     + ", телепортов " + links + ", стёкол " + panes + ", из них мимо центров клеток " + unseen);
                 DumpMap(nav, "первая сборка");
+                Detail("карта: предметы:" + MapThings(nav));
             }
             else if (before != null && before.width == w && before.height == h)
                 LogMapChanges(before.cells, nav);
@@ -199,12 +200,55 @@ namespace DuckBots
                 if (was[i] == now[i]) continue;
                 if (++changed <= 40)
                     list.Append(' ').Append(i % nav.width).Append(',').Append(i / nav.width).Append(':')
-                        .Append(CellName(was[i])).Append('→').Append(CellName(now[i]));
+                        .Append(CellName(was[i])).Append('→').Append(CellName(now[i])).Append(BlockAt(nav, i));
             }
             if (changed == 0) return;
             Log("мир: карта изменилась клеток=" + changed + " запись=f" + frame);
             Detail("мир: изменения" + list + (changed > 40 ? " …" : ""));
             DumpMap(nav, "после изменений");
+        }
+
+        // Блок, который сейчас стоит в центре клетки: по нему видно, открылась ли дверь
+        // или стена исчезла совсем — тогда блока нет, и дописывать нечего.
+        private static string BlockAt(NavMap nav, int i)
+        {
+            Block b = Level.CheckPoint<Block>(new Vec2(nav.originX + (i % nav.width + 0.5f) * NavCell,
+                                                       nav.originY + (i / nav.width + 0.5f) * NavCell));
+            if (b == null) return "";
+            Door door = b as Door;
+            return "(" + b.GetType().Name + (b.solid ? "" : " несплошной")
+                + (door != null && door.locked ? " заперта" : "") + ")";
+        }
+
+        // Что стоит на уровне и что карта видит не так, как утка: двери, ящики, трубы,
+        // выступы и рампы. Клетка — по дампу карты рядом, так фантомный проём или
+        // тонкий пол называются по имени, а не угадываются. Типы друг от друга не
+        // наследуют, так что ничего не попадёт в список дважды.
+        private static readonly Type[] _mapThings = {
+            typeof(Door), typeof(VerticalDoor), typeof(ItemBox), typeof(WireTrapDoor), typeof(PipeTileset),
+            typeof(InvisibleBlock), typeof(Conveyor), typeof(Nubber), typeof(IceWedge), typeof(SnowPile),
+            typeof(SnowDrift), typeof(Elevator) };
+
+        private static string MapThings(NavMap nav)
+        {
+            StringBuilder sb = new StringBuilder();
+            foreach (Type type in _mapThings)
+            {
+                int n = 0;
+                foreach (Thing t in Level.current.things[type])
+                {
+                    if (++n > 30) { sb.Append(" …"); break; }
+                    sb.Append(' ').Append(t.GetType().Name).Append(' ')
+                        .Append((int)Math.Floor((t.x - nav.originX) / NavCell)).Append(',')
+                        .Append((int)Math.Floor((t.y - nav.originY) / NavCell));
+                    Door door = t as Door;
+                    if (door != null && door.locked) sb.Append(" заперта");
+                    Block b = t as Block;
+                    if (b != null && !b.solid) sb.Append(" несплошной");
+                    sb.Append(';');
+                }
+            }
+            return sb.Length == 0 ? " нет" : sb.ToString();
         }
 
         private static string CellName(byte c)
