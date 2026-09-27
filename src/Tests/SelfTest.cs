@@ -22,7 +22,7 @@ namespace DuckBots
                 {
                     char ch = rows[y][x];
                     byte cell = NavMap.Empty;
-                    if (ch == '#') cell = NavMap.Solid;
+                    if (ch == '#' || ch == '|') cell = NavMap.Solid;   // стекло для физики — стена
                     else if (ch == 'S') cell = NavMap.SpringUp;
                     else if (ch == '=') cell = NavMap.Platform;
                     else if (ch == '^') cell = NavMap.Deadly;
@@ -862,7 +862,7 @@ namespace DuckBots
                 v.grounded = false;   // оторвалась
             }
 
-            return null;
+            return GlassTest();
         }
     }
 }

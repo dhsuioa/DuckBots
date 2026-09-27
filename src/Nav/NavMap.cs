@@ -323,11 +323,15 @@ namespace DuckBots
         }
 
         // Узел под точкой: утка стоит на чём-то, но её центр может попасть в клетку,
-        // где стоять нельзя, поэтому ищем ближайшую подходящую вокруг.
+        // где стоять нельзя, поэтому ищем ближайшую подходящую вокруг. Расстояние
+        // меряется от самой точки, а не от её клетки: на city11 25.09 бот стоял
+        // вплотную к стеклу справа, центр его попал в колонку стекла, и при равенстве
+        // клеток выигрывал узел слева — за стеклом, откуда маршрут и считался.
         public int NodeNear(float worldX, float worldY)
         {
-            int x = (int)((worldX - _originX) / _cell);
-            int y = (int)((worldY - _originY) / _cell);
+            float fx = (worldX - _originX) / _cell, fy = (worldY - _originY) / _cell;
+            int x = (int)fx;
+            int y = (int)fy;
             int best = -1;
             float bestDist = 0f;
             for (int r = 0; r <= 3; r++)
@@ -337,7 +341,7 @@ namespace DuckBots
                     {
                         int node = NodeAt(cx, cy);
                         if (node < 0) continue;
-                        float ddx = cx - x, ddy = cy - y;
+                        float ddx = cx + 0.5f - fx, ddy = cy + 0.5f - fy;
                         float dist = ddx * ddx + ddy * ddy;
                         if (best < 0 || dist < bestDist) { best = node; bestDist = dist; }
                     }
