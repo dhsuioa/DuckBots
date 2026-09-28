@@ -51,8 +51,9 @@ namespace DuckBots
         public const int ShootFrames = 40;     // столько стреляем, дальше — подкатом
         public const int SmashTries = 3;       // столько неудач подряд, дальше — сторож
         // Подкат от выстрела. DodgeDelay — ручка силы для этапа 3: через сколько кадров
-        // бот замечает, что в него целятся.
-        public const int DodgeDelay = 2;
+        // бот замечает, что в него целятся. Сильнейшему — сразу: бот-стрелок стреляет в
+        // первый же кадр с линией, и 27.09 пять ботов из шести погибли ещё в разгоне.
+        public const int DodgeDelay = 0;
         public const int DodgeAfter = 12;      // столько ещё лежать, когда целиться перестали
         public const int DodgeMax = 90;        // дольше не лежим: в лежачего тоже целятся
         public const int DodgeRest = 30;       // столько после этого не ложиться
