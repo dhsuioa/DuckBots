@@ -61,7 +61,10 @@ namespace DuckBots
             float range = FireRange(me);
             if (enemyNode >= 0 && range > 0f)
             {
-                int spot = _nav.FiringNode(enemy.x, enemy.bottom, range < 100f ? 16f : 32f, range);
+                // Со взрывчаткой позиция не ближе BlastSafe: вплотную взрыв достаёт стрелка.
+                Gun held = me.holdObject as Gun;
+                float near = held != null && Explodes(held) ? BotBrain.BlastSafe : range < 100f ? 16f : 32f;
+                int spot = _nav.FiringNode(enemy.x, enemy.bottom, near, range);
                 if (spot >= 0)
                 {
                     enemyNode = spot;

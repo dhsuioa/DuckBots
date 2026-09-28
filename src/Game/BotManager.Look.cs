@@ -67,8 +67,14 @@ namespace DuckBots
         // таким не разбивают — достанется себе.
         private static bool Blasts(Gun g)
         {
-            return g is Bazooka || g is GrenadeLauncher || g is GrenadeCannon || g is RomanCandle
-                || g is FlareGun || g is FlameThrower || g is LaserRifle;
+            return Explodes(g) || g is FlameThrower || g is LaserRifle;
+        }
+
+        // Рвётся там, куда попало: ракета, граната, ракетница и римская свеча (она —
+        // FlareGun). Ближе BotBrain.BlastSafe взрыв достаёт самого стрелка.
+        public static bool Explodes(Gun g)
+        {
+            return g is Bazooka || g is GrenadeLauncher || g is GrenadeCannon || g is FlareGun;
         }
 
         private static bool IsFreePresent(Thing t)
@@ -214,6 +220,7 @@ namespace DuckBots
                 v.holding = Usable(held) ? 1 : 2;
                 v.meleeInHand = IsMelee(held);
                 v.netGun = held is NetGun && v.holding == 1;
+                v.blastInHand = v.holding == 1 && Explodes(held);
                 v.glassGun = v.holding == 1 && !v.meleeInHand && !v.explosiveInHand
                     && !(held is NetGun) && !Blasts(held);
             }

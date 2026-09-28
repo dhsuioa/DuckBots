@@ -19,6 +19,9 @@ namespace DuckBots
         public const float RangeX = 150f;      // дальше бот стрелять не пробует
         public const float SameLevelY = 16f;   // на одной высоте: целятся-то горизонтально
         public const float KeepDist = 20f;     // ближе не подходим, отходим назад
+        // Ракета и граната убивают уток в 30 пикселях от взрыва и сыплют осколки ещё
+        // на 20 (ATMissile.DestroyRadius): ближе этого взрывчаткой не стреляем.
+        public const float BlastSafe = 56f;
         public const float MeleeReach = 22f;   // с мечом, наоборот, бить можно только отсюда
         public const float BoxDist = 8f;       // стоим под ящиком — можно бить снизу
         public const float ThrowRange = 70f;   // дальше граната не долетит
@@ -71,6 +74,7 @@ namespace DuckBots
         public const string WhyMeleeHit = "бью вплотную";
         public const string WhyShoot = "стреляю: линия огня";
         public const string WhyBackOff = "стреляю и отступаю: враг вплотную";
+        public const string WhyBlastBack = "отхожу: взрывчаткой вплотную нельзя";
         public const string WhyBreakout = "сторож: ухожу в сторону";
         public const string WhyPresent = "открываю подарок";
         public const string WhyJunk = "выбрасываю негодное";
@@ -362,7 +366,7 @@ namespace DuckBots
             // 4. Враг прямо над головой. Горизонтально его не достать — угол прицела
             // в игре не выбирается, — но в воздухе с зажатым прыжком утка машет
             // крыльями, и на взмахах ствол поднимается вверх сам. Этим и стреляем.
-            if (v.holding == 1 && v.canShootUp)
+            if (v.holding == 1 && v.canShootUp && !(v.blastInHand && -v.ey < BlastSafe))
             {
                 s.mode = Fight;
                 s.why = WhyShootUp;
@@ -399,6 +403,17 @@ namespace DuckBots
                     }
                     s.why = WhyMeleeHit;
                     return Pulse(ref s.shootTimer, ShootHold, ShootGap) ? BotInput.SHOOT : (ushort)0;
+                }
+
+                // Базука, гранатомёт, ракетница рвутся там, куда попали, и ближе BlastSafe
+                // взрыв достаёт самого стрелка: вплотную не стрелять, а отходить. STRAFE
+                // держит утку лицом к врагу, чтобы выстрелить сразу, как отошла. За спиной
+                // пропасть — стоять.
+                if (v.blastInHand && Math.Abs(v.ex) < BlastSafe)
+                {
+                    s.why = WhyBlastBack;
+                    if (Abyss(ref v, targetRight ? -1 : 1)) return 0;
+                    return (ushort)(BotInput.STRAFE | (targetRight ? BotInput.LEFT : BotInput.RIGHT));
                 }
 
                 ushort m = 0;
