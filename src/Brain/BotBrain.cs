@@ -181,11 +181,14 @@ namespace DuckBots
             else if (--s.dodgeLeft <= 0) { EndDodge(ref s); return m; }
             if (s.dodgeFrames > DodgeMax) { EndDodge(ref s); s.dodgeRest = DodgeRest; return m; }
 
-            // Стоим: разгон туда, куда бот и так шёл, иначе к стрелку — не прочь от цели.
+            // Стоим: разгон туда, куда бот уже катится, — разворот съедает 5–6 кадров, и
+            // 28.09 боты гибли, тормозя перед подкатом; иначе туда, куда он и так шёл,
+            // иначе к стрелку — не прочь от цели.
             bool down = v.sliding || Math.Abs(v.hs) > 1f;
             if (!down && s.dodgeDir == 0)
             {
-                int dir = (m & BotInput.RIGHT) != 0 ? 1 : (m & BotInput.LEFT) != 0 ? -1 : (v.threatDx > 0f ? 1 : -1);
+                int dir = v.hs > 0.3f ? 1 : v.hs < -0.3f ? -1
+                    : (m & BotInput.RIGHT) != 0 ? 1 : (m & BotInput.LEFT) != 0 ? -1 : (v.threatDx > 0f ? 1 : -1);
                 if (Abyss(ref v, dir)) dir = -dir;
                 if (Abyss(ref v, dir)) { EndDodge(ref s); s.dodgeRest = DodgeRest; return m; }   // разгоняться некуда
                 s.dodgeDir = dir;
