@@ -20,6 +20,7 @@ namespace DuckBots
     {
         public const byte Empty = 0, Solid = 1, Platform = 2, Deadly = 3;
         public const byte SpringUp = 4, SpringLeft = 5, SpringRight = 6;
+        public const byte SpringDiagLeft = 7, SpringDiagRight = 8;   // вверх и вбок: SpringUpLeft/UpRight
         public const int Walk = 0, Jump = 1, Drop = 2, Launch = 3, Smash = 4;
 
         // Ручка силы для этапа 3: во сколько пикселей пути бот ценит удар по стеклу —
@@ -333,15 +334,18 @@ namespace DuckBots
             return n;
         }
 
-        // ponytail: диагональные пружины считаются вертикальными, а SpringDown
-        // не даёт рёбер вовсе. Полноценно это значит считать баллистику с начальной
-        // скоростью под углом — делать, когда станет видно, что бот мимо них ходит.
+        // ponytail: полёт от пружины — короб целей, а не баллистика: прямая бросает
+        // вверх в обе стороны, боковая — вбок, диагональная — вверх в свою сторону.
+        // SpringDown рёбер не даёт. Считать баллистику, если бот начнёт мимо них летать.
         private int Launches(byte spring, int x, int y, int at)
         {
             int n = 0;
             int fromX = -LaunchSide, toX = LaunchSide, fromY = -LaunchRise, toY = 2;
             if (spring == SpringLeft) { toX = -1; fromY = -2; }
             else if (spring == SpringRight) { fromX = 1; fromY = -2; }
+            // Диагональная бросает вверх, как прямая, но с hSpeed ±10: только в свою сторону.
+            else if (spring == SpringDiagLeft) toX = -1;
+            else if (spring == SpringDiagRight) fromX = 1;
 
             for (int dy = fromY; dy <= toY; dy++)
                 for (int dx = fromX; dx <= toX; dx++)

@@ -38,10 +38,17 @@ namespace DuckBots
             Spring sp = Level.CheckPoint<Spring>(p);
             if (sp != null)
             {
-                if (sp is SpringDown) return NavMap.Empty;      // вниз пинает, маршруту бесполезна
+                // Вниз пинают — маршруту бесполезны (нижние диагональные — наследники SpringUpRight).
+                if (sp is SpringDown || sp is SpringDownLeft || sp is SpringDownRight) return NavMap.Empty;
                 if (sp is SpringLeft) return sp.flipHorizontal ? NavMap.SpringRight : NavMap.SpringLeft;
                 if (sp is SpringRight) return sp.flipHorizontal ? NavMap.SpringLeft : NavMap.SpringRight;
-                return NavMap.SpringUp;                         // прямая и диагональные
+                // Диагональные бросают вверх и вбок (hSpeed ±10). Раньше они считались
+                // прямыми, и на city02 28.09 маршрут вёл через правую пружину влево —
+                // бот улетал вправо, возвращался и вставал на неё снова. SpringUpLeft —
+                // наследник SpringUpRight, поэтому проверяется первой.
+                if (sp is SpringUpLeft) return sp.flipHorizontal ? NavMap.SpringDiagRight : NavMap.SpringDiagLeft;
+                if (sp is SpringUpRight) return sp.flipHorizontal ? NavMap.SpringDiagLeft : NavMap.SpringDiagRight;
+                return NavMap.SpringUp;
             }
 
             Block b = Level.CheckPoint<Block>(p);
@@ -273,7 +280,9 @@ namespace DuckBots
                 case NavMap.Deadly: return "смерть";
                 case NavMap.SpringUp:
                 case NavMap.SpringLeft:
-                case NavMap.SpringRight: return "пружина";
+                case NavMap.SpringRight:
+                case NavMap.SpringDiagLeft:
+                case NavMap.SpringDiagRight: return "пружина";
                 default: return "пусто";
             }
         }
@@ -284,7 +293,7 @@ namespace DuckBots
         {
             Detail("карта: " + why + " уровень=" + MapName(Level.current) + " клеток=" + nav.width + "x"
                 + nav.height + " узлов=" + nav.nodeCount + " начало=" + (int)nav.originX + ","
-                + (int)nav.originY + " клетка=16 — # стена, | стекло, = платформа, ^ смерть, S < > пружины,"
+                + (int)nav.originY + " клетка=16 — # стена, | стекло, = платформа, ^ смерть, S < > \\ / пружины,"
                 + " o узел, T телепорт, . пусто");
             _mapRows.Clear();
             nav.Render(_mapRows);

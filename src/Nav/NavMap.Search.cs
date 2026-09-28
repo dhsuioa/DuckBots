@@ -110,6 +110,8 @@ namespace DuckBots
                     else if (c == SpringUp) ch = 'S';
                     else if (c == SpringLeft) ch = '<';
                     else if (c == SpringRight) ch = '>';
+                    else if (c == SpringDiagLeft) ch = '\\';
+                    else if (c == SpringDiagRight) ch = '/';
                     else if (_node[i] >= 0) ch = Linked(_node[i]) ? 'T' : 'o';
                     line[x] = ch;
                 }
