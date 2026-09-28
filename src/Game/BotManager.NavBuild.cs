@@ -52,6 +52,14 @@ namespace DuckBots
                 // половина арены оказывается недостижимой.
                 Door door = b as Door;
                 if (door != null) return door.locked ? NavMap.Solid : NavMap.Empty;
+                // Раздвижная дверь (и пирамидная) сама открывается, когда утка ближе 18
+                // пикселей, — для маршрута это проход. Закрытой её видел момент перестройки
+                // карты, и граф на случайных уровнях рвался надвое (27.09, р=9 и р=17).
+                // Дверь на проводе (slideLocked) слушается кнопку, а выход аркады
+                // (MetroidDoor) — свои условия: их оставляем как есть.
+                VerticalDoor slide = b as VerticalDoor;
+                if (slide != null && !(slide is MetroidDoor) && (!slide.slideLocked || slide.slideLockOpened))
+                    return NavMap.Empty;
                 if (!b.solid) return NavMap.Empty;
                 return NavMap.Solid;
             }
