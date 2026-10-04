@@ -62,6 +62,7 @@ namespace DuckBots
                     _lastLobby = lobby;
                 }
                 SyncSlots(lobby);
+                BotSettings.SaveIfChanged();
             }
 
             if (_framesSinceChange >= 0)

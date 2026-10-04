@@ -20,6 +20,7 @@ namespace DuckBots
             // поэтому 0Harmony.dll рядом с модом надо разрешать вручную.
             _dir = configuration.directory;
             BotManager.OpenLogs(_dir);
+            BotSettings.Load(Path.Combine(_dir, "bots.txt"));
             AppDomain.CurrentDomain.AssemblyResolve += ResolveLocal;
         }
 

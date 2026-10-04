@@ -65,12 +65,68 @@ namespace DuckBots
 
         public static readonly BotSlot[] slots = CreateSlots();
 
+        // Выбор в меню переживает перезапуск игры: строка уровней в файле в папке мода.
+        // Без файла все слоты OFF — игрок из Workshop не должен найти в лобби чужую утку.
+        private static string _file;
+        private static readonly int[] _saved = new int[Max];
+
         private static BotSlot[] CreateSlots()
         {
             BotSlot[] s = new BotSlot[Max];
             for (int i = 0; i < Max; i++) s[i] = new BotSlot();
-            s[0].level = 2; // один средний бот из коробки
             return s;
+        }
+
+        // «2,0,4» → уровни слотов. Нехватка, мусор и числа вне списка — OFF:
+        // файл правят руками, и кривая строка не должна посадить бота в слот.
+        public static int[] Parse(string text)
+        {
+            int[] levels = new int[Max];
+            if (text == null) return levels;
+            string[] parts = text.Split(',');
+            for (int i = 0; i < Max && i < parts.Length; i++)
+            {
+                int v;
+                if (int.TryParse(parts[i].Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out v)
+                    && v >= 0 && v < levelNames.Count)
+                    levels[i] = v;
+            }
+            return levels;
+        }
+
+        public static void Load(string file)
+        {
+            _file = file;
+            string text = null;
+            try
+            {
+                if (File.Exists(file)) text = File.ReadAllText(file);
+            }
+            catch (Exception e)
+            {
+                BotManager.Log("мод: настройки ботов не прочитались, все OFF: " + e.Message);
+            }
+            int[] levels = Parse(text);
+            for (int i = 0; i < Max; i++) _saved[i] = slots[i].level = levels[i];
+        }
+
+        // Каждый кадр лобби: семь сравнений, файл пишется только когда выбор изменился.
+        public static void SaveIfChanged()
+        {
+            if (_file == null) return;
+            bool changed = false;
+            for (int i = 0; i < Max; i++)
+                if (slots[i].level != _saved[i]) { changed = true; break; }
+            if (!changed) return;
+            for (int i = 0; i < Max; i++) _saved[i] = slots[i].level;
+            try
+            {
+                File.WriteAllText(_file, string.Join(",", _saved));
+            }
+            catch (Exception e)
+            {
+                BotManager.Log("мод: настройки ботов не сохранились: " + e.Message);
+            }
         }
     }
 
