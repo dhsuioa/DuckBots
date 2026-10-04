@@ -41,7 +41,7 @@ namespace DuckBots
                 ? "мод: самопроверка мозга ок"
                 : "мод: САМОПРОВЕРКА МОЗГА УПАЛА — " + fail);
             ApplyPatches();
-            BotManager.HideFromModHash(this);
+            BotManager.hideFromHash = this; // подмена отпечатка — в первом кадре, см. там
             BotManager.FlushLogs();
         }
 

@@ -26,6 +26,12 @@ namespace DuckBots
             if (Level.current == null) return;
             frame++;
             if (!_commandsAdded) AddCommands();
+            if (hideFromHash != null)
+            {
+                Mod self = hideFromHash;
+                hideFromHash = null; // один раз, даже если упадёт
+                HideFromModHash(self);
+            }
 
             // Новый уровень: сводка прошлого раунда, журнал уток заново. Здесь, в
             // начале кадра, чтобы все строки нового раунда шли уже с его номером.

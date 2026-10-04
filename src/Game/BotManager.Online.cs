@@ -14,8 +14,11 @@ namespace DuckBots
         // ни своих Thing, ни NetMessage, так что для сети его будто нет, — и отпечаток мы
         // считаем без себя: друг без мода заходит к нам, мы — в ванильные лобби. Формулу не
         // повторяем: на время вызова убираем себя из списка модов и зовём настоящий GetModHash.
-        // Игра считает отпечаток до OnPostInitialize; если «было» в журнале пустое — порядок
-        // в этой версии другой, и подмену перетрут.
+        // Зовётся в первом кадре (Tick), а не из OnPostInitialize: тот игра вызывает изнутри
+        // foreach по этому же _sortedAccessibleMods, и правка списка роняла загрузку игры
+        // («Коллекция была изменена»). OnStart зовётся так же.
+        public static Mod hideFromHash;
+
         public static void HideFromModHash(Mod self)
         {
             BindingFlags st = BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public;
