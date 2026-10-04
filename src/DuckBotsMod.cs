@@ -41,6 +41,7 @@ namespace DuckBots
                 ? "мод: самопроверка мозга ок"
                 : "мод: САМОПРОВЕРКА МОЗГА УПАЛА — " + fail);
             ApplyPatches();
+            BotManager.HideFromModHash(this);
             BotManager.FlushLogs();
         }
 
@@ -91,6 +92,24 @@ namespace DuckBots
             catch (Exception)
             {
                 // Журнал не должен ронять смерть утки.
+            }
+        }
+    }
+
+    // Уходя в сеть из лобби, игра собирает здесь список локальных игроков. Ботов из него
+    // вычёркиваем, иначе они уедут в сетевую игру без мозга (BotManager.DropBotsFromMatchmaking).
+    [HarmonyPatch(typeof(TeamSelect2), "FillMatchmakingProfiles")]
+    public static class MatchmakingPatch
+    {
+        private static void Postfix()
+        {
+            try
+            {
+                BotManager.DropBotsFromMatchmaking();
+            }
+            catch (Exception e)
+            {
+                BotManager.Log("мод: ботов из списка сетевой игры убрать не вышло: " + e);
             }
         }
     }

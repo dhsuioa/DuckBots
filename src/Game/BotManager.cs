@@ -54,14 +54,22 @@ namespace DuckBots
             TeamSelect2 lobby = Level.current as TeamSelect2;
             if (lobby != null)
             {
-                // Возврат из матча создаёт новый TeamSelect2 со своими коробками,
-                // старые ссылки протухли — переехать на новые.
-                if (lobby != _lastLobby)
+                if (Network.isActive)
                 {
-                    Rebind(lobby);
-                    _lastLobby = lobby;
+                    // В сети ботов пока нет: офлайновая посадка (подмена ввода в коробке и
+                    // START) там не работает, а сетевые профили слотов потом достаются людям.
+                    // Посаженных офлайн снимаем до Rebind: он искал бы их профили среди
+                    // сетевых, не нашёл и бросил бы BotInput в вечном профиле слота.
+                    if (bots.Count > 0) ReleaseAll(GetBoxes(lobby));
                 }
-                SyncSlots(lobby);
+                else
+                {
+                    // Возврат из матча создаёт новый TeamSelect2 со своими коробками,
+                    // старые ссылки протухли — переехать на новые.
+                    if (lobby != _lastLobby) Rebind(lobby);
+                    SyncSlots(lobby);
+                }
+                _lastLobby = lobby;
                 BotSettings.SaveIfChanged();
             }
 
