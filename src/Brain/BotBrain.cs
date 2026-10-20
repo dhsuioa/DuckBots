@@ -106,6 +106,7 @@ namespace DuckBots
         public const string HowGuessJump = "цель выше: прыжок наугад";
         public const string HowAbyss = "стою: впереди пропасть";
         public const string HowHere = "на месте";
+        public const string HowStepOff = "схожу с опоры, которой нет на карте";
         public const string HowAlign = "встаю в центр клетки перед прыжком";
         public const string HowSmashBack = "отхожу от стекла";
         public const string HowSmashShoot = "стреляю в стекло";
@@ -676,6 +677,31 @@ namespace DuckBots
             bool jumpEdge = routed && edge == NavMap.Jump && v.grounded;
             // Полёт пружиной: дойти до неё ногами и не прыгать — дальше сработает она.
             if (routed && edge == NavMap.Launch) jumpEdge = false;
+
+            // Шаг маршрута ровно под ногами, а мы стоим: под нами то, чего карта не видит, —
+            // выступ Nubber или край тайла. Карта считает, что тут пусто и бот вот-вот
+            // упадёт к узлу внизу. 20.10 на forest04_8 бот так простоял на выступе 30 с.
+            // Сойти с этой опоры туда, где под ногами обрыв; нет такой стороны или там
+            // пропасть — пачками кадров в обе стороны, но в пропасть не шагать.
+            if (routed && dir == 0 && wantDown && v.grounded && !jumpEdge)
+            {
+                int side = v.gapLeft == v.gapRight ? 0 : (v.gapRight ? 1 : -1);
+                if (side == 0 || Abyss(ref v, side))
+                {
+                    if (s.wanderFrames <= 0)
+                    {
+                        s.wanderFrames = WanderFrames;
+                        s.wanderDir = s.wanderDir == 0 ? (v.facingRight ? 1 : -1) : -s.wanderDir;
+                    }
+                    s.wanderFrames--;
+                    if (Abyss(ref v, s.wanderDir)) s.wanderDir = -s.wanderDir;
+                    side = s.wanderDir;
+                }
+                s.stuckFrames = 0;
+                if (Abyss(ref v, side)) { s.how = HowAbyss; return 0; }
+                s.how = HowStepOff;
+                return side > 0 ? BotInput.RIGHT : BotInput.LEFT;
+            }
 
             // Маршрута нет, по горизонтали пришли, а по вертикали нет: ходим вдоль
             // платформы пачками кадров и ищем подъём. Стоять столбом нельзя — ровно
