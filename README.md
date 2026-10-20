@@ -75,6 +75,28 @@ Open the console with `~`:
 - **One fire range for every gun.** Bots don't yet account for each weapon's range.
 - **No equipment.** Bots don't wear armor or jetpacks.
 
+## Roadmap
+
+The order may change based on what players report. There are no dates: each change is tested in real matches before the next one.
+
+**Next up**
+
+- [ ] Bots stop getting stuck bouncing on springs under a ceiling.
+- [ ] An item box counts as much as a weapon lying on the floor, so bots stop running past a nearby box to a far-away gun.
+- [ ] Each weapon's own range: snipers shoot from far away, short-range guns wait until they are close.
+- [ ] Aimed arcs for the grenade launcher and grenade cannon, and bullet drop for weapons affected by gravity.
+- [ ] Bots stop picking up weapons they can't use yet, and then learn the Mind Control Ray: grab an enemy and walk them off a ledge.
+
+**Later**
+
+- [ ] Real difficulty levels from `DUCKLING` to `BEAST`: reaction time, accuracy, weapon choice, sense of danger.
+- [ ] Putting out fire with an extinguisher or water.
+- [ ] Equipment: jetpacks, helmets and armor.
+- [ ] Ropes and vines.
+- [ ] Charge weapons (Death Ray, Coil Gun) and smarter reloading of the musket and its relatives.
+- [ ] Online polish: PLAY ONLINE with 3+ bots and an in-game hint when the lobby is full.
+- [ ] Better map reading: doors that block line of sight, small ledges, pipes, keys and locked doors.
+
 ## Reporting bugs
 
 The mod keeps a short log of what the bots did and why at `%APPDATA%\DuckGame\DuckBots-data\botlog.txt`. It is rewritten when the game starts; the previous run is kept as `botlog.prev.txt`. Please attach it to a [GitHub issue](https://github.com/dhsuioa/DuckBots/issues) together with the map name and what you saw. The log is in Russian, and that's fine.
