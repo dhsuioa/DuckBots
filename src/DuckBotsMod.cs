@@ -96,12 +96,13 @@ namespace DuckBots
         }
     }
 
-    // Уходя в сеть из лобби, игра собирает здесь список локальных игроков. Ботов из него
-    // вычёркиваем, иначе они уедут в сетевую игру без мозга (BotManager.DropBotsFromMatchmaking).
-    [HarmonyPatch(typeof(TeamSelect2), "FillMatchmakingProfiles")]
+    // Хостя, игра сажает локальными игроками всех из списка, собранного при уходе в сеть.
+    // Ботов из него вычёркиваем до этого и сажаем сами; в гостях список не трогаем — так
+    // боты и приходят с нами (BotManager.DropBotsFromMatchmaking).
+    [HarmonyPatch(typeof(DuckNetwork), "Host")]
     public static class MatchmakingPatch
     {
-        private static void Postfix()
+        private static void Prefix()
         {
             try
             {

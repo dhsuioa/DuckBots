@@ -108,7 +108,7 @@ namespace DuckBots
                 Bot b = new Bot();
                 b.slot = s;
                 b.level = BotSettings.slots[s].level;
-                b.input = new BotInput("bot" + (s + 1));
+                b.input = new BotInput(s);
                 b.pressStartFrames = 2;
                 Attach(b, box);
                 bots.Add(b);

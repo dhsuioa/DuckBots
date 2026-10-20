@@ -39,7 +39,11 @@ namespace DuckBots
         private ushort _mask;
         private ushort _prevMask;
 
-        public BotInput(string profileName) : base(profileName) { }
+        // Строка меню BOTS, к которой относится ввод. По ней бот находится снова, когда
+        // игра сама привела его в сетевую игру (BotManager.AdoptBots).
+        public readonly int slot;
+
+        public BotInput(int slot) : base("bot" + (slot + 1)) { this.slot = slot; }
 
         public ushort mask { get { return _mask; } }
 
