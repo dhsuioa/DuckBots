@@ -4,7 +4,11 @@
 
 Computer-controlled ducks for [Duck Game](https://store.steampowered.com/app/312530/Duck_Game/). Fill an empty lobby with bots and play a real match, offline or online with friends who don't have the mod.
 
-**0.1 beta** · [Steam Workshop](#install) *(link coming soon)* · [How to play](#how-to-play) · [Known issues](#known-issues) · [Report a bug](#reporting-bugs)
+![version](https://img.shields.io/badge/version-0.1%20beta-orange)
+[![license](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
+[![Steam Workshop](https://img.shields.io/badge/Steam%20Workshop-coming%20soon-1b2838?logo=steam&logoColor=white)](#install)
+[![Duck Game](https://img.shields.io/badge/Duck%20Game-mod-f2c53d)](https://store.steampowered.com/app/312530/Duck_Game/)
+[![issues](https://img.shields.io/github/issues/dhsuioa/DuckBots)](https://github.com/dhsuioa/DuckBots/issues)
 
 ![A Duck Game lobby round with eight ducks: the player and seven bots](assets/screenshot.png)
 
@@ -34,6 +38,9 @@ DuckBots doesn't move ducks around and doesn't change the game's rules. Each bot
 ## How to play
 
 **Offline.** In the lobby, open the pause menu and choose **BOTS**. Each of the seven rows is one bot: switch it from `OFF` to a level. Bots take free rooms starting from the last one and never take the first room, which is yours. Your choice is remembered between launches.
+
+<img src="assets/bots-menu.png" width="480" alt="The lobby pause menu with the BOTS item at the bottom">
+
 
 **Hosting online.** Open the lobby pause menu and choose **INVITE FRIENDS**. In the network lobby the pause menu has **BOTS** next to EDIT SLOTS, so you can add or remove bots on the fly. During a match the host also gets **SKIP**, to end a round where bots got stuck.
 
@@ -107,7 +114,7 @@ Pull requests are welcome. A few practical notes:
 
 - **One behaviour change per pull request.** Bot behaviour can only be checked by playing. When several changes go into one match, it's impossible to tell which one made the bots better or worse.
 - **Start from the log.** Find the cause in `botlog.txt` before changing code, or in `botlog-detail.txt` with `debug.txt` on. Where the logic is pure, add a self-test case in `Tests/`.
-- **Language.** Code comments, logs and commit messages are in Russian. Write your pull request in English or Russian, whichever you prefer.
+- **Language.** Most existing comments, logs and commit messages are in Russian, but English is just as welcome: write your code comments, commits and pull requests in English or Russian, whichever you prefer.
 
 ## License
 
