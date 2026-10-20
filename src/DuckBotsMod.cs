@@ -19,9 +19,29 @@ namespace DuckBots
             // Игра грузит мод через Assembly.Load(byte[]) и не ищет соседние DLL сама,
             // поэтому 0Harmony.dll рядом с модом надо разрешать вручную.
             _dir = configuration.directory;
-            BotManager.OpenLogs(_dir);
-            BotSettings.Load(Path.Combine(_dir, "bots.txt"));
+            // Всё, что мод пишет на ходу, — журналы, bots.txt, debug.txt — живёт не в
+            // папке мода: в Workshop уходит вся она, и подписчики получили бы чужие
+            // журналы и чужой выбор ботов, а у них самих мод лежит в папке Steam.
+            string data = DataDirectory();
+            BotManager.OpenLogs(data);
+            BotSettings.Load(Path.Combine(data, "bots.txt"));
             AppDomain.CurrentDomain.AssemblyResolve += ResolveLocal;
+        }
+
+        // %APPDATA%\DuckGame\DuckBots-data — рядом с Mods, в папке сохранений игры.
+        // Не вышло — в папку мода, как раньше: журнал важнее чистоты папки.
+        private static string DataDirectory()
+        {
+            try
+            {
+                string data = Path.Combine(DuckFile.saveDirectory, "DuckBots-data");
+                Directory.CreateDirectory(data);
+                return data;
+            }
+            catch (Exception)
+            {
+                return _dir;
+            }
         }
 
         private static Assembly ResolveLocal(object sender, ResolveEventArgs args)
@@ -296,7 +316,7 @@ namespace DuckBots
         {
             try
             {
-                if (__instance.dead || !(__instance.inputProfile is BotInput)) return;
+                if (!BotManager.debug || __instance.dead || !(__instance.inputProfile is BotInput)) return;
                 Bot b = BotManager.Find(__instance);
                 if (b == null) return;
                 Graphics.DrawString(BotBrain.modeNames[b.state.mode],

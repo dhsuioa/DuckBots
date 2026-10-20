@@ -25,10 +25,29 @@ namespace DuckBots
         private const long DetailCap = 64L << 20;     // байт: подробный журнал растёт быстро
         private static StreamWriter _mainLog, _detailLog;
         private static long _detailBytes;
+        private static string _detailPath;
+
+        // Отладка: подробный журнал, подписи режимов над утками и строки журнала в консоли
+        // игры. У игрока из Workshop её нет — подробный журнал дорастал до 64 МБ за вечер,
+        // а подписи загораживают игру. Включается файлом debug.txt в папке мода (так у
+        // разработки) или консольной командой botdebug.
+        public static bool debug;
+
+        public static void SetDebug(bool on)
+        {
+            debug = on;
+            if (on && _detailLog == null && _detailPath != null)
+            {
+                _detailLog = OpenLog(_detailPath);
+                if (_detailLog != null) _detailLog.WriteLine("--- отладка включена " + DateTime.Now + " ---");
+            }
+        }
 
         public static void OpenLogs(string dir)
         {
             string main = Path.Combine(dir, "botlog.txt"), detail = Path.Combine(dir, "botlog-detail.txt");
+            _detailPath = detail;
+            debug = File.Exists(Path.Combine(dir, "debug.txt"));
             // Журналы прошлого матча не затирать: игру перезапускают после каждой сборки,
             // и журнал матча 27.09 пропал, не дождавшись разбора. Пустой запуск (меньше
             // 16 КБ) старую копию не трогает.
@@ -42,7 +61,7 @@ namespace DuckBots
             }
             catch (Exception) { }
             _mainLog = OpenLog(main);
-            _detailLog = OpenLog(detail);
+            if (debug) _detailLog = OpenLog(detail);
             string head = "--- запуск " + DateTime.Now + " ---";
             if (_mainLog != null) _mainLog.WriteLine(head);
             if (_detailLog != null) _detailLog.WriteLine(head);
@@ -68,7 +87,7 @@ namespace DuckBots
 
         public static void Log(string msg)
         {
-            DevConsole.Log(DCSection.Mod, "DuckBots: " + msg);
+            if (debug) DevConsole.Log(DCSection.Mod, "DuckBots: " + msg);
             if (_mainLog == null) return;
             try { _mainLog.WriteLine(Stamp() + msg); }
             catch (Exception) { }

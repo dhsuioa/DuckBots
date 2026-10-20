@@ -130,14 +130,21 @@ namespace DuckBots
                 // «botlog» — полный журнал: самописец всех уток пишется в подробный
                 // файл непрерывно, кадр за кадром. Включать на той карте, где бот
                 // тупит: без события запись иначе остаётся в памяти.
+                // «botdebug» — подписи режимов над ботами и подробный журнал (см. debug).
+                DevConsole.AddCommand(new CMD("botdebug", () =>
+                {
+                    SetDebug(!debug);
+                    Log("мод: отладка " + (debug ? "включена: подписи над ботами, botlog-detail.txt" : "выключена"));
+                }));
                 DevConsole.AddCommand(new CMD("botlog", () =>
                 {
+                    if (!fullLog && !debug) SetDebug(true);   // без подробного журнала писать некуда
                     fullLog = !fullLog;
                     Log("мод: полный журнал " + (fullLog
                         ? "включён — каждый кадр каждой утки идёт в botlog-detail.txt"
                         : "выключен"));
                 }));
-                Log("мод: консольные команды nextround и botlog добавлены");
+                Log("мод: консольные команды nextround, botdebug и botlog добавлены");
             }
             catch (Exception e)
             {
