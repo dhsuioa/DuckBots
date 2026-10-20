@@ -2,6 +2,8 @@
 !/.gitignore
 !/.gitattributes
 !/README.md
+!/README.ru.md
 !/LICENSE
+!/assets/
 !/build.cmd
 !/src/
