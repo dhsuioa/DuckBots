@@ -210,10 +210,11 @@ namespace DuckBots
     }
 
     // В сети пауза — другое меню: «MULTIPLAYER» собирает DuckNetwork.OpenMenu в свою
-    // группу при каждом открытии, BuildPauseMenu лобби тут ни при чём. Пункт BOTS — только
-    // хосту и только в лобби: ботов в сети сажает хост (BotManager.SyncSlotsOnline), а в
-    // матче состав не меняют. Меню к этому моменту уже открыто; Insert помечает его
-    // грязным, и раскладка пересчитается сама.
+    // группу при каждом открытии, BuildPauseMenu лобби тут ни при чём. Всё только хосту:
+    // в лобби — BOTS (ботов в сети сажает хост, BotManager.SyncSlotsOnline), в матче —
+    // SKIP, которого у хоста в ванили нет, а застрявших ботов иначе не прервать (это та
+    // же GameMode.Skip, что и консольная nextround). Меню к этому моменту уже открыто;
+    // Insert помечает его грязным, и раскладка пересчитается сама.
     [HarmonyPatch(typeof(DuckNetwork), "OpenMenu")]
     public static class NetPauseMenuPatch
     {
@@ -233,7 +234,10 @@ namespace DuckBots
 
         private static void Build()
         {
-            if (!Network.isServer || !(Level.current is TeamSelect2)) return;
+            if (!Network.isServer) return;
+            GameLevel match = Level.current as GameLevel;
+            bool lobby = Level.current is TeamSelect2;
+            if (!lobby && (match == null || match.matchOver)) return;
             if (_groupProp == null)
                 _groupProp = typeof(DuckNetwork).GetProperty("_ducknetUIGroup",
                     BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
@@ -241,17 +245,43 @@ namespace DuckBots
             UIMenu menu = DuckNetwork.core._ducknetMenu;
             if (group == null || menu == null) { BotManager.Log("не найдено сетевое меню паузы"); return; }
 
-            UIMenu botsMenu = PauseMenuPatch.BotsMenu(menu, group);
-            UIMenuItem item = new UIMenuItem("|DGBLUE|BOTS", new UIMenuActionOpenMenu(menu, botsMenu), UIAlign.Left);
-            // Рядом со своими: после EDIT SLOTS. Не нашли — в конец.
+            if (lobby)
+            {
+                UIMenu botsMenu = PauseMenuPatch.BotsMenu(menu, group);
+                // Рядом со своими: после EDIT SLOTS.
+                Place(menu, new UIMenuItem("|DGBLUE|BOTS", new UIMenuActionOpenMenu(menu, botsMenu), UIAlign.Left),
+                      ItemIndex(menu, "EDIT SLOTS") + 1);
+            }
+            else
+            {
+                Place(menu, new UIMenuItem("|DGRED|SKIP", new UIMenuActionCloseMenuCallFunction(group,
+                    new UIMenuActionCloseMenuCallFunction.Function(Skip)), UIAlign.Left),
+                      ItemIndex(menu, "DISCONNECT"));
+            }
+        }
+
+        private static void Skip()
+        {
+            BotManager.Log("мод: раунд пропущен хостом из меню");
+            GameMode.Skip();
+        }
+
+        // Номер пункта, в тексте которого есть label, или −1.
+        private static int ItemIndex(UIMenu menu, string label)
+        {
             IList<UIComponent> parts = PauseMenuPatch.Section(menu);
-            int at = -1;
             for (int i = 0; parts != null && i < parts.Count; i++)
             {
                 UIMenuItem mi = parts[i] as UIMenuItem;
-                if (mi != null && mi.text != null && mi.text.Contains("EDIT SLOTS")) at = i + 1;
+                if (mi != null && mi.text != null && mi.text.Contains(label)) return i;
             }
-            if (at < 0) menu.Add(item, true);
+            return -1;
+        }
+
+        // На место at, а если соседа не нашли (at < 0, или после −1 — ноль) — в конец.
+        private static void Place(UIMenu menu, UIMenuItem item, int at)
+        {
+            if (at <= 0) menu.Add(item, true);
             else menu.Insert(item, at, true);
         }
     }
