@@ -158,19 +158,7 @@ namespace DuckBots
             UIDivider column = FindColumn(pauseMenu);
             if (column == null) { BotManager.Log("не найдена колонка меню паузы"); return; }
 
-            UIMenu botsMenu = new UIMenu("BOTS", Layer.HUD.camera.width / 2f,
-                                         Layer.HUD.camera.height / 2f, 180f);
-            for (int i = 0; i < BotSettings.Max; i++)
-                botsMenu.Add(new UIMenuItemNumber("BOT " + (i + 1), null,
-                    new FieldBinding(BotSettings.slots[i], "level",
-                                     0f, BotSettings.levelNames.Count - 1, 1f),
-                    valStrings: BotSettings.levelNames), true);
-            botsMenu.Add(new UIMenuItem("BACK", new UIMenuActionOpenMenu(botsMenu, pauseMenu),
-                                        backButton: true), true);
-            botsMenu.Close();
-            pauseGroup.Add(botsMenu, false);
-            botsMenu.DoUpdate();
-
+            UIMenu botsMenu = BotsMenu(pauseMenu, pauseGroup);
             column.leftSection.Add(new UIMenuItem("BOTS",
                 new UIMenuActionOpenMenu(pauseMenu, botsMenu)), true);
 
@@ -181,20 +169,90 @@ namespace DuckBots
             pauseGroup.Update();
         }
 
-        // UIMenu.Add кладёт не в components, а в приватный _section. Внутри него
-        // единственный ребёнок — UIDivider: слева колонка пунктов, справа картинка.
-        private static UIDivider FindColumn(UIMenu menu)
+        // Подменю BOTS: семь строк OFF/DUCKLING/…, BACK возвращает в меню back.
+        // Кладётся закрытым в ту же группу, что и back, — иначе переход не откроется.
+        public static UIMenu BotsMenu(UIMenu back, UIComponent group)
+        {
+            UIMenu botsMenu = new UIMenu("BOTS", Layer.HUD.camera.width / 2f,
+                                         Layer.HUD.camera.height / 2f, 180f);
+            for (int i = 0; i < BotSettings.Max; i++)
+                botsMenu.Add(new UIMenuItemNumber("BOT " + (i + 1), null,
+                    new FieldBinding(BotSettings.slots[i], "level",
+                                     0f, BotSettings.levelNames.Count - 1, 1f),
+                    valStrings: BotSettings.levelNames), true);
+            botsMenu.Add(new UIMenuItem("BACK", new UIMenuActionOpenMenu(botsMenu, back),
+                                        backButton: true), true);
+            botsMenu.Close();
+            group.Add(botsMenu, false);
+            botsMenu.DoUpdate();
+            return botsMenu;
+        }
+
+        // UIMenu.Add кладёт не в components, а в приватный _section.
+        public static IList<UIComponent> Section(UIMenu menu)
         {
             FieldInfo sf = Field(typeof(UIMenu), "_section", ref _sectionField);
-            if (sf == null) return null;
-            UIComponent section = sf.GetValue(menu) as UIComponent;
-            if (section == null) return null;
+            UIComponent section = sf == null ? null : sf.GetValue(menu) as UIComponent;
+            return section == null ? null : section.components;
+        }
 
-            IList<UIComponent> parts = section.components;
+        // В меню паузы лобби единственный ребёнок секции — UIDivider:
+        // слева колонка пунктов, справа картинка.
+        private static UIDivider FindColumn(UIMenu menu)
+        {
+            IList<UIComponent> parts = Section(menu);
+            if (parts == null) return null;
             for (int i = 0; i < parts.Count; i++)
                 // Тип именно точный: UIMenuItem — тоже наследник UIDivider.
                 if (parts[i].GetType() == typeof(UIDivider)) return (UIDivider)parts[i];
             return null;
+        }
+    }
+
+    // В сети пауза — другое меню: «MULTIPLAYER» собирает DuckNetwork.OpenMenu в свою
+    // группу при каждом открытии, BuildPauseMenu лобби тут ни при чём. Пункт BOTS — только
+    // хосту и только в лобби: ботов в сети сажает хост (BotManager.SyncSlotsOnline), а в
+    // матче состав не меняют. Меню к этому моменту уже открыто; Insert помечает его
+    // грязным, и раскладка пересчитается сама.
+    [HarmonyPatch(typeof(DuckNetwork), "OpenMenu")]
+    public static class NetPauseMenuPatch
+    {
+        private static PropertyInfo _groupProp;
+
+        private static void Postfix()
+        {
+            try
+            {
+                Build();
+            }
+            catch (Exception e)
+            {
+                BotManager.Log("сетевое меню ботов не собралось: " + e);
+            }
+        }
+
+        private static void Build()
+        {
+            if (!Network.isServer || !(Level.current is TeamSelect2)) return;
+            if (_groupProp == null)
+                _groupProp = typeof(DuckNetwork).GetProperty("_ducknetUIGroup",
+                    BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
+            UIComponent group = _groupProp == null ? null : _groupProp.GetValue(null, null) as UIComponent;
+            UIMenu menu = DuckNetwork.core._ducknetMenu;
+            if (group == null || menu == null) { BotManager.Log("не найдено сетевое меню паузы"); return; }
+
+            UIMenu botsMenu = PauseMenuPatch.BotsMenu(menu, group);
+            UIMenuItem item = new UIMenuItem("|DGBLUE|BOTS", new UIMenuActionOpenMenu(menu, botsMenu), UIAlign.Left);
+            // Рядом со своими: после EDIT SLOTS. Не нашли — в конец.
+            IList<UIComponent> parts = PauseMenuPatch.Section(menu);
+            int at = -1;
+            for (int i = 0; parts != null && i < parts.Count; i++)
+            {
+                UIMenuItem mi = parts[i] as UIMenuItem;
+                if (mi != null && mi.text != null && mi.text.Contains("EDIT SLOTS")) at = i + 1;
+            }
+            if (at < 0) menu.Add(item, true);
+            else menu.Insert(item, at, true);
         }
     }
 
