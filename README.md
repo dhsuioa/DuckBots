@@ -6,7 +6,7 @@ Computer-controlled ducks for [Duck Game](https://store.steampowered.com/app/312
 
 ![version](https://img.shields.io/badge/version-0.1%20beta-orange)
 [![license](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
-[![Steam Workshop](https://img.shields.io/badge/Steam%20Workshop-coming%20soon-1b2838?logo=steam&logoColor=white)](#install)
+[![Steam Workshop](https://img.shields.io/badge/Steam%20Workshop-subscribe-1b2838?logo=steam&logoColor=white)](https://steamcommunity.com/sharedfiles/filedetails/?id=3823678387)
 [![Duck Game](https://img.shields.io/badge/Duck%20Game-mod-f2c53d)](https://store.steampowered.com/app/312530/Duck_Game/)
 [![issues](https://img.shields.io/github/issues/dhsuioa/DuckBots)](https://github.com/dhsuioa/DuckBots/issues)
 
@@ -32,7 +32,7 @@ DuckBots doesn't move ducks around and doesn't change the game's rules. Each bot
 
 ## Install
 
-- **From Steam Workshop:** subscribe on the Workshop page *(link coming soon)* and restart the game.
+- **From Steam Workshop:** subscribe on the [Workshop page](https://steamcommunity.com/sharedfiles/filedetails/?id=3823678387) and restart the game.
 - **Manually:** download `DuckBots-<version>.zip` from [Releases](https://github.com/dhsuioa/DuckBots/releases), unzip it into `%APPDATA%\DuckGame\Mods\` so that you get `Mods\DuckBots\DuckBots.dll`, and restart the game.
 
 ## How to play

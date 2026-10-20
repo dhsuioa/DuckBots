@@ -6,7 +6,7 @@
 
 ![version](https://img.shields.io/badge/version-0.1%20beta-orange)
 [![license](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
-[![Steam Workshop](https://img.shields.io/badge/Steam%20Workshop-coming%20soon-1b2838?logo=steam&logoColor=white)](#установка)
+[![Steam Workshop](https://img.shields.io/badge/Steam%20Workshop-subscribe-1b2838?logo=steam&logoColor=white)](https://steamcommunity.com/sharedfiles/filedetails/?id=3823678387)
 [![Duck Game](https://img.shields.io/badge/Duck%20Game-mod-f2c53d)](https://store.steampowered.com/app/312530/Duck_Game/)
 [![issues](https://img.shields.io/github/issues/dhsuioa/DuckBots)](https://github.com/dhsuioa/DuckBots/issues)
 
@@ -32,7 +32,7 @@ DuckBots не двигает уток сам и не меняет правила
 
 ## Установка
 
-- **Из Steam Workshop:** подпишитесь на странице мода *(ссылка скоро)* и перезапустите игру.
+- **Из Steam Workshop:** подпишитесь на [странице мода](https://steamcommunity.com/sharedfiles/filedetails/?id=3823678387) и перезапустите игру.
 - **Вручную:** скачайте `DuckBots-<версия>.zip` со страницы [Releases](https://github.com/dhsuioa/DuckBots/releases), распакуйте в `%APPDATA%\DuckGame\Mods\` так, чтобы получилось `Mods\DuckBots\DuckBots.dll`, и перезапустите игру.
 
 ## Как играть
