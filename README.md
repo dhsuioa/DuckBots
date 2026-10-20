@@ -33,7 +33,7 @@ DuckBots doesn't move ducks around and doesn't change the game's rules. Each bot
 ## Install
 
 - **From Steam Workshop:** subscribe on the Workshop page *(link coming soon)* and restart the game.
-- **Manually:** put `mod.conf`, `DuckBots.dll` and `0Harmony.dll` into `%APPDATA%\DuckGame\Mods\DuckBots\` and restart the game.
+- **Manually:** download `DuckBots-<version>.zip` from [Releases](https://github.com/dhsuioa/DuckBots/releases), unzip it into `%APPDATA%\DuckGame\Mods\` so that you get `Mods\DuckBots\DuckBots.dll`, and restart the game.
 
 ## How to play
 

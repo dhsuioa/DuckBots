@@ -33,7 +33,7 @@ DuckBots не двигает уток сам и не меняет правила
 ## Установка
 
 - **Из Steam Workshop:** подпишитесь на странице мода *(ссылка скоро)* и перезапустите игру.
-- **Вручную:** положите `mod.conf`, `DuckBots.dll` и `0Harmony.dll` в `%APPDATA%\DuckGame\Mods\DuckBots\` и перезапустите игру.
+- **Вручную:** скачайте `DuckBots-<версия>.zip` со страницы [Releases](https://github.com/dhsuioa/DuckBots/releases), распакуйте в `%APPDATA%\DuckGame\Mods\` так, чтобы получилось `Mods\DuckBots\DuckBots.dll`, и перезапустите игру.
 
 ## Как играть
 
