@@ -154,6 +154,7 @@ namespace DuckBots
         public int pickupNode = -1;                         // узел, куда за ней идти
         public Thing danger;                                // от чего бежит: в журнал
         public bool atSpot;                                 // стоит на позиции для выстрела
+        public int spotWait, spotOff;                       // ждёт на ней без линии; позиция забыта
         public bool hasThrowStep, atThrowSpot;              // несёт пойманного: путь к краю
         public float throwStepX, throwStepY;
         public int throwStepEdge, throwStepProg, throwDir;

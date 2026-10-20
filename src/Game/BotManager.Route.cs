@@ -59,7 +59,7 @@ namespace DuckBots
             // вооружённые боты 157 раз из 181 гнались за врагом на другой высоте.
             b.atSpot = false;
             float range = FireRange(me);
-            if (enemyNode >= 0 && range > 0f)
+            if (enemyNode >= 0 && range > 0f && b.spotOff == 0)   // spotOff — см. Look
             {
                 // Со взрывчаткой позиция не ближе BlastSafe: вплотную взрыв достаёт стрелка.
                 Gun held = me.holdObject as Gun;
