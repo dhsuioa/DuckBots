@@ -185,6 +185,18 @@ namespace DuckBots
             b.profile.SetInputProfileLink(null);
         }
 
+        // В чужую игру боты идут только к своим: по приглашению или из списка друзей Steam.
+        // Мод для сети невидим, и в лобби незнакомцев из быстрого поиска или браузера
+        // серверов боты пришли бы без спроса. Оба «своих» пути идут через
+        // NCSteam.OnInviteReceived, он запоминает inviteLobbyID; SendJoinMessage, перед
+        // которым нас зовут, решает по нему же, приглашён ли игрок, и сбрасывает его.
+        public static void BotsOnlyForFriends()
+        {
+            if (NCSteam.inviteLobbyID != 0UL) { Log("мод: заходим по приглашению, боты идут с нами"); return; }
+            int removed = UIMatchmakingBox.core.matchmakingProfiles.RemoveAll(p => p.inputProfile is BotInput);
+            if (removed > 0) Log("мод: заходим не по приглашению — к незнакомцам ботов не берём: " + removed);
+        }
+
         // Уходя в сеть из лобби, игра собирает в этот список всех, у кого есть команда,
         // вместе с их вводом. Хостя, DuckNetwork.Host сажает каждого из списка локальным
         // игроком. Этот путь для ботов не проверен, и есть повод его опасаться:

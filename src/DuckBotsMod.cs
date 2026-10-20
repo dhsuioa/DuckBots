@@ -135,6 +135,24 @@ namespace DuckBots
         }
     }
 
+    // Клиент отправляет хосту список своих игроков здесь. Не по приглашению — ботов
+    // из списка вычёркиваем (BotManager.BotsOnlyForFriends).
+    [HarmonyPatch(typeof(DuckNetwork), "SendJoinMessage")]
+    public static class JoinPatch
+    {
+        private static void Prefix()
+        {
+            try
+            {
+                BotManager.BotsOnlyForFriends();
+            }
+            catch (Exception e)
+            {
+                BotManager.Log("мод: проверить приглашение не вышло: " + e);
+            }
+        }
+    }
+
     // Меню паузы лобби игра пересобирает целиком при каждом открытии,
     // поэтому пункт добавляем здесь, а не один раз при старте.
     [HarmonyPatch(typeof(TeamSelect2), "BuildPauseMenu")]
