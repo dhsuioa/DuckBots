@@ -170,6 +170,11 @@ namespace DuckBots
         // так что оставить в нём мёртвый BotInput значит отнять слот у человека.
         private static void Release(Bot b, bool boxIsLive)
         {
+            if (b.online)
+            {
+                ReleaseOnline(b);
+                return;
+            }
             if (b.profile != null)
             {
                 // Геттер inputProfile сам подставит обратно настоящий контроллер

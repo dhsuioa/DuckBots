@@ -134,6 +134,7 @@ namespace DuckBots
     {
         public int slot;                   // индекс в BotSettings.slots
         public int level;
+        public bool online;                // сетевой локальный игрок хоста, коробки у него нет
         public Profile profile;
         public BotInput input;
         public ProfileBox2 box;
