@@ -176,10 +176,14 @@ namespace DuckBots
             b.pickupNode = best < 0 ? -1 : _cands[best].node;
         }
 
+        // Невидимое в цели не годится. В сети ящик создаёт содержимое заранее и держит
+        // его внутри себя невидимым и неактивным (ItemBox.UpdateContainedObject), чтобы
+        // разослать клиентам. 20.10 боты шли к такому стволу — в точку ящика, на него, —
+        // и ни разу не выбрали сам ящик: ствол важнее ящика, а под ящик и бьют.
         private static void AddCandidate(Bot b, Thing t, int kind, bool netHolder)
         {
             Holdable h = t as Holdable;
-            if (t.removeFromLevel || (h != null && (h.owner != null || !h.canPickUp))) return;
+            if (t.removeFromLevel || !t.visible || (h != null && (h.owner != null || !h.canPickUp))) return;
             Candidate c = new Candidate();
             c.thing = t;
             c.kind = kind;

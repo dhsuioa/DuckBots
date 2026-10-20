@@ -30,7 +30,7 @@ namespace DuckBots
         private static bool IsFreeGun(Thing t)
         {
             Gun g = t as Gun;
-            return g != null && Usable(g) && g.owner == null && !g.removeFromLevel && !Skipped(t);
+            return g != null && Usable(g) && g.owner == null && !g.removeFromLevel && g.visible && !Skipped(t);
         }
 
         // Недостижимые цели текущего бота. Статическое поле, потому что предикат для
@@ -80,7 +80,7 @@ namespace DuckBots
         private static bool IsFreePresent(Thing t)
         {
             Present p = t as Present;
-            return p != null && p.owner == null && !p.removeFromLevel && !Skipped(t);
+            return p != null && p.owner == null && !p.removeFromLevel && p.visible && !Skipped(t);
         }
 
         private static bool IsLiveBox(Thing t)
