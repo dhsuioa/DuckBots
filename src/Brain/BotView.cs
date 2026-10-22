@@ -56,6 +56,7 @@ namespace DuckBots
         public int enemyStepEdge, pickupStepEdge;
         public int enemyStepProg, pickupStepProg;   // программа прыжка, если шаг — прыжок
         public float hs;            // скорость по x со знаком
+        public bool kicked;         // в этом кадре бота подбросило (пружина): шаг маршрута — уже из полёта
         public float alignDx;       // сколько до центра своей клетки: прыжок по программе — оттуда
         // Ближайшее целое вертикальное стекло на высоте утки, от центра до центра:
         // у зазора ноль знак стороны теряется. Маршрут ведёт сквозь стекло ребром Smash.

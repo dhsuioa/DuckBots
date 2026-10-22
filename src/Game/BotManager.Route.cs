@@ -28,13 +28,18 @@ namespace DuckBots
             // на земле, а бот, прыгающий по ребру «прыжок», стоит на земле два-три
             // кадра за цикл — шаг устаревал на секунды, и бот прыгал на месте
             // (подпись «прыжок(0,N)» в строках сторожа 24.09).
-            if (!me.grounded || me.ragdoll != null) { b.routeWait = 0; return; }
-            if (b.routeWait > 0) { b.routeWait--; return; }
+            //
+            // Исключение — полёт с пружины (см. kicked в Look): его цель решается уже в
+            // воздухе, поэтому маршрут считается один раз из узла над пружиной.
+            bool springFlight = b.flightStart >= 0 && me.ragdoll == null;
+            if (!springFlight && (!me.grounded || me.ragdoll != null)) { b.routeWait = 0; return; }
+            if (!springFlight && b.routeWait > 0) { b.routeWait--; return; }
             b.routeWait = RouteEvery;
             b.hasEnemyStep = false;
             b.hasPickupStep = false;
 
-            int start = _nav == null ? -1 : _nav.NodeNear(me.x, me.bottom - 4f);
+            int start = springFlight ? b.flightStart : _nav == null ? -1 : _nav.NodeNear(me.x, me.bottom - 4f);
+            b.flightStart = -1;
             if (start < 0)
             {
                 // Карты нет или бот вне её — цель по прямой, как раньше.

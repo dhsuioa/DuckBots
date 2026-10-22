@@ -97,6 +97,7 @@ namespace DuckBots
         public const string HowRouteJump = "прыжок по маршруту";
         public const string HowRouteDrop = "вниз сквозь платформу по маршруту";
         public const string HowSpring = "к пружине по маршруту";
+        public const string HowSpringFlight = "лечу с пружины: рулю к цели полёта";
         public const string HowDirect = "напрямик: маршрута нет";
         public const string HowDropGuess = "вниз сквозь платформу наугад";
         public const string HowWander = "брожу: цель над или под, маршрута нет";
@@ -127,6 +128,10 @@ namespace DuckBots
         {
             if (s.jumpRest > 0) s.jumpRest--;
             s.how = null;
+            // Подбросила пружина — начатая программа прыжка больше не про этот полёт: она
+            // кончается только приземлением, а пружина под блоком ловит бота раньше земли.
+            // Дальше рулит ребро полёта с пружины (его шаг Route считает прямо в воздухе).
+            if (v.kicked) { s.progAt = 0; s.jumpHold = 0; s.stuckFrames = 0; }
             ushort m = Think(ref v, ref s);
             m = Dodge(m, ref v, ref s);
             if (s.jumpHold > 0)
@@ -745,7 +750,7 @@ namespace DuckBots
             else if (dir < 0) m |= BotInput.LEFT;
             if (s.how == null)
                 s.how = !routed ? HowDirect
-                      : edge == NavMap.Launch ? HowSpring
+                      : edge == NavMap.Launch ? (v.grounded ? HowSpring : HowSpringFlight)
                       : jumpEdge ? HowRouteJump : HowRoute;
 
             if (v.grounded && v.speedAbs < 0.2f) s.stuckFrames++;

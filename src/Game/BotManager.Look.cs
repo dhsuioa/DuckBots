@@ -26,6 +26,7 @@ namespace DuckBots
         private const float FootDepth = 34f;   // глубже — уже яма, а не ступенька
         // Ручка силы для этапа 3: сколько ждать линии на позиции и на сколько её забыть.
         private const int SpotPatience = 120, SpotOffFrames = 180;
+        private const float KickVs = -5.5f;    // быстрее вверх своим прыжком (−4.9) не взлететь
 
         // isFatal игра ставит сама: у саксофона, трубы, тромбона и кейтара он false.
         // Отдельного списка музыкальных стволов заводить не надо, игра его уже знает.
@@ -302,6 +303,20 @@ namespace DuckBots
                 Log(BotName(b) + ": на позиции " + SpotPatience / 60 + "с нет линии, иду к врагу — " + Context(b, me));
             }
             if (b.spotOff > 0) b.spotOff--;
+
+            // Толчок пружины: в воздухе скорость вверх резко выросла. Свой прыжок даёт −4.9
+            // и только с земли, пружина — до −22 (повторные отскоки под блоком −6…−7).
+            // Запоминаем узел над пружиной: маршрут в полёте посчитаем один раз оттуда, и
+            // следующим шагом будет ребро полёта с неё (Launch) — к его цели бот и рулит.
+            bool kicked = !me.grounded && me.vSpeed < KickVs && b.prevVs - me.vSpeed > 3f;
+            b.prevVs = me.vSpeed;
+            v.kicked = kicked;
+            if (kicked && _nav != null)
+            {
+                b.flightStart = _nav.NodeNear(me.x, me.bottom - 4f);
+                b.routeWait = 0;
+            }
+            else if (me.grounded) b.flightStart = -1;
 
             // Маршрут вокруг ям и через этажи знает только граф; прямое направление
             // приводит бота в стену. Считаем его не каждый кадр: цель за десять кадров

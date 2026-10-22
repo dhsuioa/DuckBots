@@ -27,6 +27,34 @@ namespace DuckBots
                 return "пружина: правая диагональная не бросает на полку справа";
             if (nav.MoveKnown(5 * 16 + 8f, 5 * 16 + 8f, 1 * 16 + 8f, 1 * 16 + 8f, out edge) == NavMap.KnownEdge)
                 return "пружина: правая диагональная «бросает» влево — граф считает её вертикальной";
+            return SpringFlightTest();
+        }
+
+        // Пружина под блоком: 20.10 на forest13_8 четверо ботов скакали на пружинах, пока
+        // раунд не закончили руками. Бот допрыгивал до пружины программой и доигрывал её
+        // дальше — программа кончается только приземлением, а пружина ловила его раньше
+        // земли: подбрасывала в блок над собой и ловила снова. Кнопок программа к тому
+        // кадру уже не жала, и бот не рулил. Подбросило — программу бросить и рулить к
+        // цели полёта (ребро Launch, его шаг считается в полёте).
+        private static string SpringFlightTest()
+        {
+            BotView v = new BotView();
+            BotState s = new BotState();
+            v.hasEnemy = true; v.ex = 200f; v.ey = -100f; v.holding = 1;
+            v.grounded = false; v.facingRight = false;
+            v.hasEnemyStep = true; v.enemyStepX = 80f; v.enemyStepY = -40f; v.enemyStepEdge = NavMap.Launch;
+            s.prog = NavMap.Prog(1, 4, 0, 16, 0);   // «h4 вправо 0-16», как в журнале forest13_8
+            s.progAt = 31;                          // кадр 30: программа уже ничего не жмёт
+            v.kicked = true;
+            ushort m = Decide(ref v, ref s);
+            if (s.progAt != 0) return "пружина: подбросило, а бот доигрывает программу прыжка";
+            if ((m & BotInput.RIGHT) == 0) return "пружина: в полёте с пружины бот не рулит к цели (кнопки " + m + ")";
+            if (s.how != HowSpringFlight) return "причина: полёт с пружины записан как «" + s.how + "»";
+
+            // Следующий кадр, толчка уже нет: рулить дальше, программа не возвращается.
+            v.kicked = false;
+            m = Decide(ref v, ref s);
+            if ((m & BotInput.RIGHT) == 0 || s.progAt != 0) return "пружина: на втором кадре полёта бот бросил руль";
             return null;
         }
     }

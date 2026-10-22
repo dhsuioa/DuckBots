@@ -155,6 +155,8 @@ namespace DuckBots
         public Thing danger;                                // от чего бежит: в журнал
         public bool atSpot;                                 // стоит на позиции для выстрела
         public int spotWait, spotOff;                       // ждёт на ней без линии; позиция забыта
+        public float prevVs;                                // скорость по y в прошлом кадре: толчок пружины
+        public int flightStart = -1;                        // узел над пружиной, с которой подбросило
         public bool hasThrowStep, atThrowSpot;              // несёт пойманного: путь к краю
         public float throwStepX, throwStepY;
         public int throwStepEdge, throwStepProg, throwDir;
