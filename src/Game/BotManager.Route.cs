@@ -135,7 +135,8 @@ namespace DuckBots
         // ствол и холодное; сеткомёт — только если смертельного не достать; гранату
         // бот бросает лишь вплотную, а в матче 24.09 боты то и дело брали её вместо
         // ствола. В конце подарок и ящик — их ещё надо открыть.
-        private const int KindTrap = 0, KindGun = 1, KindNet = 2, KindBomb = 3, KindPresent = 4, KindBox = 5;
+        private const int KindTrap = BotBrain.KindTrap, KindGun = BotBrain.KindGun, KindNet = BotBrain.KindNet,
+            KindBomb = BotBrain.KindBomb, KindPresent = BotBrain.KindPresent, KindBox = BotBrain.KindBox;
 
         private static readonly List<Candidate> _cands = new List<Candidate>();
         private static bool _canThrow;   // из узла бота достижим край над пропастью
@@ -165,9 +166,8 @@ namespace DuckBots
             {
                 Candidate c = _cands[i];
                 if (c.status != null) continue;
-                if (best < 0 || c.kind < _cands[best].kind
-                    || (c.kind == _cands[best].kind
-                        && _nav.RouteLength(c.node) < _nav.RouteLength(_cands[best].node)))
+                if (best < 0 || BotBrain.BetterPickup(c.kind, _nav.RouteLength(c.node),
+                                                      _cands[best].kind, _nav.RouteLength(_cands[best].node)))
                     best = i;
             }
             Thing chosen = best < 0 ? null : _cands[best].thing;
@@ -195,6 +195,9 @@ namespace DuckBots
             else if (g != null && !g.isFatal && kind != KindNet) c.status = "несмертельный";
             else if (g is SuicidePistol) c.status = "стреляет назад";
             else if (kind == KindBox && ((ItemBox)t)._hit) c.status = "ящик пуст";
+            // Фиолетовый — хранилище: отдаёт то, что в него положили, а боту класть нечего.
+            // 20.10 боты выбирали его целью 5 раз за матч и били впустую.
+            else if (t is PurpleBlock) c.status = "фиолетовый: хранилище, оружия не даёт";
             else if (b.skip.Contains(t)) c.status = "забыт сторожем";
             else
             {
