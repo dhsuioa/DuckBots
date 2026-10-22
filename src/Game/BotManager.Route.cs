@@ -194,6 +194,7 @@ namespace DuckBots
             else if ((kind == KindTrap || kind == KindNet) && !_canThrow) c.status = "некуда бросить: нет пропасти";
             else if (g != null && !g.isFatal && kind != KindNet) c.status = "несмертельный";
             else if (g is SuicidePistol) c.status = "стреляет назад";
+            else if (g != null && Unskilled(g)) c.status = "особое: бот пока не умеет";
             else if (kind == KindBox && ((ItemBox)t)._hit) c.status = "ящик пуст";
             // Фиолетовый — хранилище: отдаёт то, что в него положили, а боту класть нечего.
             // 20.10 боты выбирали его целью 5 раз за матч и били впустую.

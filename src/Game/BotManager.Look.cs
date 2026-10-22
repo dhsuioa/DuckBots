@@ -49,11 +49,20 @@ namespace DuckBots
         // самоубийство, а не оружие.
         private static bool Usable(Gun g)
         {
-            if (g.ammo <= 0 || g is SuicidePistol) return false;
+            if (g.ammo <= 0 || g is SuicidePistol || Unskilled(g)) return false;
             // Сеткомёт несмертелен, но там, где есть пропасть, это оружие: поймать
             // врага сеткой, поднять и бросить за край.
             if (g is NetGun) return _nav != null && _nav.hasAbyssEdge;
             return g.isFatal;
+        }
+
+        // Особое оружие, для которого у бота ещё нет своей логики. Игра считает его
+        // смертельным, и бот брал его как ствол: луч захвата обездвиживает самого стрелка,
+        // пультом водят машинку, магнит только притягивает металл — бот стоял с ними без
+        // толку. Пока не брать, логику для каждого — отдельно. GoodBook бот использует сам.
+        private static bool Unskilled(Gun g)
+        {
+            return g is MindControlRay || g is RCController || g is MagnetGun;
         }
 
         // Общего предка у холодного оружия нет, все они просто Gun. Список взят из
