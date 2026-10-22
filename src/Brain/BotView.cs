@@ -17,6 +17,7 @@ namespace DuckBots
         public bool hasEnemy;
         public float ex, ey;        // враг относительно бота
         public bool canShoot;       // линия огня чиста и по высоте совпали
+        public bool glassLine;      // линия идёт сквозь целое стекло: пуля его разобьёт
         public bool canShootUp;     // враг над головой: достать можно только взмахами
         public int holding;         // 0 пусто, 1 годное оружие, 2 негодное, 3 не оружие
         public bool explosiveInHand;// граната или мина: их не держат, их бросают

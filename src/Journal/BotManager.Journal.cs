@@ -569,7 +569,7 @@ namespace DuckBots
         {
             BotView v = b.view;
             string s = "враг=" + (v.hasEnemy ? (int)v.ex + "," + (int)v.ey : "нет")
-                + " линия=" + (v.canShoot ? "да" : v.canShootUp ? "вверх" : "нет")
+                + " линия=" + (v.glassLine ? "сквозь_стекло" : v.canShoot ? "да" : v.canShootUp ? "вверх" : "нет")
                 + " в_руках=" + (d.holdObject == null ? "нет" : Describe(d.holdObject));
             if (v.hasPickup && b.pickup != null)
                 s += " цель=" + Describe(b.pickup) + "(" + (int)v.px + "," + (int)v.py + ")";

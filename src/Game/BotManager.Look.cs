@@ -101,6 +101,28 @@ namespace DuckBots
             return BotBrain.FireReach(a.range, a.rangeVariation, a.accuracy, a.affectedByGravity);
         }
 
+        // Ствол, пуля которого бьёт стекло и летит дальше: не холодное, не взрывчатка, не
+        // сеткомёт, не огонь и не луч.
+        private static bool GlassGun(Gun g)
+        {
+            return g != null && Usable(g) && !IsMelee(g) && !(g is Grenade) && !(g is Mine)
+                && !(g is NetGun) && !Blasts(g);
+        }
+
+        // Стена на линии огня. Целое стекло без решётки такому стволу не стена: у окна
+        // толщина 0.3, пуля его бьёт и летит дальше. Раньше боты по разные стороны
+        // стекла стояли и ждали линию (office12_8 22.10, на скриншоте человека).
+        private static bool Wall(Vec2 a, Vec2 b, bool glassGun)
+        {
+            if (!glassGun) return Level.CheckLine<Block>(a, b) != null;
+            foreach (Block k in Level.CheckLineAll<Block>(a, b))
+            {
+                Window w = k as Window;
+                if (w == null || w.bars.value) return true;
+            }
+            return false;
+        }
+
         private static bool IsFreePresent(Thing t)
         {
             Present p = t as Present;
@@ -224,14 +246,15 @@ namespace DuckBots
                 // Пара проверок из ванильного AIStateFindTarget: луч до утки и стена на пути.
                 // Луч пускаем в сторону врага, а не по offDir: бот, стоящий спиной, иначе
                 // никогда не узнает, что достаточно развернуться.
+                bool through = GlassGun(me.holdObject as Gun);
+                bool wall = Wall(me.position, enemy.position, through);
                 v.canShootUp = v.ey < -BotBrain.SameLevelY && v.ey > -BotBrain.HoverReach
-                    && Math.Abs(v.ex) < BotBrain.HoverAimX
-                    && Level.CheckLine<Block>(me.position, enemy.position) == null;
+                    && Math.Abs(v.ex) < BotBrain.HoverAimX && !wall;
                 v.canShoot = Math.Abs(v.ey) < BotBrain.SameLevelY
-                    && Math.Abs(v.ex) < GunReach(me.holdObject as Gun)
-                    && Level.CheckLine<Block>(me.position, enemy.position) == null
+                    && Math.Abs(v.ex) < GunReach(me.holdObject as Gun) && !wall
                     && Level.CheckRay<Duck>(me.position + new Vec2(v.ex > 0f ? 10f : -10f, 0f),
                                             enemy.position) == enemy;
+                v.glassLine = v.canShoot && through && Level.CheckLine<Block>(me.position, enemy.position) != null;
             }
 
             Gun held = me.holdObject as Gun;
@@ -247,8 +270,7 @@ namespace DuckBots
                 v.netGun = held is NetGun && v.holding == 1;
                 v.blastInHand = v.holding == 1 && Explodes(held);
                 v.holdFire = v.holding == 1 && held is FlameThrower;
-                v.glassGun = v.holding == 1 && !v.meleeInHand && !v.explosiveInHand
-                    && !(held is NetGun) && !Blasts(held);
+                v.glassGun = GlassGun(held);
 
                 // Гранатомёт бьёт навесом: линия огня на одной высоте ему не нужна, нужна
                 // дуга до врага, которую не перегораживает стена. Взмахами вверх он не стреляет.
@@ -483,7 +505,7 @@ namespace DuckBots
                 float dx = me.x - e.x;
                 if (Math.Abs(dx) > ThreatRange || Math.Abs(me.y - e.y) >= BotBrain.SameLevelY) continue;
                 if ((dx > 0f) != (e.offDir > 0)) continue;                   // смотрит не на бота
-                if (Level.CheckLine<Block>(e.position, me.position) != null) continue;
+                if (Wall(e.position, me.position, GlassGun(g))) continue;
                 if (Level.CheckRay<Duck>(e.position + new Vec2(dx > 0f ? 10f : -10f, 0f), me.position) != me) continue;
                 if (best != null && Math.Abs(dx) >= Math.Abs(bestDx)) continue;
                 best = e;

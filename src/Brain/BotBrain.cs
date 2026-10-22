@@ -75,6 +75,7 @@ namespace DuckBots
         public const string WhyShoot = "стреляю: линия огня";
         public const string WhyBackOff = "стреляю и отступаю: враг вплотную";
         public const string WhyLob = "гранатомёт: поднимаю ствол под дугу";
+        public const string WhyGlassBack = "отхожу от стекла, чтобы стрелять сквозь него";
         public const string WhyBlastBack = "отхожу: взрывчаткой вплотную нельзя";
         public const string WhyBreakout = "сторож: ухожу в сторону";
         public const string WhyPresent = "открываю подарок";
@@ -436,6 +437,15 @@ namespace DuckBots
                 {
                     s.why = WhyBlastBack;
                     if (Abyss(ref v, targetRight ? -1 : 1)) return 0;
+                    return (ushort)(BotInput.STRAFE | (targetRight ? BotInput.LEFT : BotInput.RIGHT));
+                }
+
+                // Сквозь стекло вплотную не стрелять: ствол упирается в него и задирается
+                // вверх (ShootMin, как у удара по стеклу). Отойти лицом к врагу.
+                if (v.glassLine && v.hasGlass && (v.glassDx > 0f) == targetRight
+                    && Math.Abs(v.glassDx) - GlassReach < ShootMin && !Abyss(ref v, targetRight ? -1 : 1))
+                {
+                    s.why = WhyGlassBack;
                     return (ushort)(BotInput.STRAFE | (targetRight ? BotInput.LEFT : BotInput.RIGHT));
                 }
 

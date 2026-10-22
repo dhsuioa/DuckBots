@@ -105,6 +105,27 @@ namespace DuckBots
                 if ((m & BotInput.RIGHT) == 0) return "стекло: разбито, а бот не идёт дальше";
             }
 
+            // --- враг за стеклом: стрелять сквозь него, но не вплотную ---
+            // office12_8 22.10: бот с пистолетом стоял у стекла, за ним враг, и ждал линию.
+            // Пуля стекло бьёт; вплотную же ствол упирается и задирается вверх.
+            BotView g = new BotView();
+            s = new BotState();
+            g.hasEnemy = true; g.ex = 40f; g.canShoot = true; g.glassLine = true; g.holding = 1; g.glassGun = true;
+            g.facingRight = true; g.grounded = true; g.hasGlass = true; g.glassDx = 30f;
+            fired = false;
+            for (int f = 0; f < 20; f++) if ((Decide(ref g, ref s) & BotInput.SHOOT) != 0) fired = true;
+            if (!fired) return "стекло: враг за стеклом, а бот не стреляет сквозь него";
+            g.glassDx = GlassReach + 4f;
+            s = new BotState();
+            for (int f = 0; f < 20; f++)
+            {
+                ushort m = Decide(ref g, ref s);
+                if ((m & BotInput.SHOOT) != 0) return "стекло: стреляет вплотную к стеклу — ствол задерётся";
+                if ((m & BotInput.LEFT) == 0 || (m & BotInput.STRAFE) == 0)
+                    return "стекло: вплотную к стеклу не отходит лицом к врагу";
+            }
+            if (s.why != WhyGlassBack) return "причина: отход от стекла записан как «" + s.why + "»";
+
             return null;
         }
 
