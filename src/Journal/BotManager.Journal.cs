@@ -424,21 +424,63 @@ namespace DuckBots
             if (shot != null)
             {
                 Thing from = shot.bulletFiredFrom;
-                string gun = from == null ? "?" : from.GetType().Name;
+                // Осколки гранаты из гранатомёта выпускает сама граната (GrenadeBullet), и
+                // владельца у них нет: ствол и стрелок — дальше по цепочке.
+                Thing src = Origin(from);
+                if (by == null) by = OwnerOf(src, d);
+                string gun = src == null ? "?" : src.GetType().Name;
                 // Осколки гранаты и мины — тоже пули, выпущенные ими самими.
-                if (from is Grenade || from is Mine) return "взрыв:" + gun;
+                if (from is Grenade || from is Mine || from is Bullet) return "взрыв:" + gun;
                 Bullet bullet = shot.bullet;
                 return "пуля:" + gun + "/"
                     + (bullet != null && bullet.ammo != null ? bullet.ammo.GetType().Name : "?");
             }
             string what = t.thing == null ? "" : ":" + t.thing.GetType().Name;
             if (t is DTImpale) return "насадился" + what;
-            if (t is DTIncinerate) return "огонь" + what;
+            if (t is DTIncinerate)
+            {
+                // Огонь выпускают огнемёт и вспышка ракетницы, и владельца нет ни у огня,
+                // ни у вспышки: до 22.10 все 13 смертей от них записаны без «кто».
+                Thing src = Origin(t.thing);
+                if (by == null) by = OwnerOf(src, d);
+                return "огонь" + what + (src != null && src != t.thing ? "/" + src.GetType().Name : "");
+            }
             if (t is DTCrush) return "раздавлен" + what;
             if (t is DTImpact) return "удар" + what;
             if (t is DTRocketExplosion) return "ракета" + what;
             if (t is DTElectrocute) return "ток" + what;
             return t.GetType().Name + what;
+        }
+
+        // Чем выпущено то, что убило: осколок — гранатой, граната — гранатомётом, огонь —
+        // огнемётом или вспышкой, вспышка — ракетницей (её приватное Flare._owner).
+        private static FieldInfo _flareOwner;
+
+        private static Thing Origin(Thing t)
+        {
+            for (int i = 0; i < 8 && t != null; i++)
+            {
+                Thing next = null;
+                if (t is Bullet) next = ((Bullet)t).firedFrom;
+                else if (t is SmallFire) next = ((SmallFire)t).firedFrom;
+                else if (t is Flare)
+                {
+                    if (_flareOwner == null)
+                        _flareOwner = typeof(Flare).GetField("_owner",
+                            BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
+                    next = _flareOwner.GetValue(t) as Thing;
+                }
+                if (next == null) return t;
+                t = next;
+            }
+            return t;
+        }
+
+        // Стрелок — тот, кто держит ствол или держал его последним (responsibleProfile).
+        private static string OwnerOf(Thing src, Duck d)
+        {
+            Profile p = src == null ? null : src.responsibleProfile;
+            return p == null ? null : p == d.profile ? "сам" : WhoIs(p);
         }
 
         // Тип смерти игра передаёт только в Duck.Kill — ловим его там, а пишем,
