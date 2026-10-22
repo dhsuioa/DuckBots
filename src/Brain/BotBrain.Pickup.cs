@@ -25,6 +25,11 @@ namespace DuckBots
         // Пули с гравитацией летят дугой — для них пока прежние RangeX.
         public const float ReachMargin = 16f, DuckHalfHeight = 10f;
 
+        // Огнемёт пуль не выпускает: из ствола летит огонь (SmallFire) со скоростью 2–3.5,
+        // трением 0.03 и гравитацией 0.07 за кадр и с высоты ствола падает на пол в 35–85
+        // пикселях от него. Патрон у огнемёта для вида (AT9mm), по нему выходило 234.
+        public const float FlameReach = 60f;
+
         public static float FireReach(float range, float rangeVariation, float accuracy, bool gravity)
         {
             if (gravity || range <= 0f) return RangeX;

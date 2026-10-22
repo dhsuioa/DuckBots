@@ -95,6 +95,7 @@ namespace DuckBots
         {
             if (g == null || g.ammoType == null || IsMelee(g) || g is NetGun
                 || g is Grenade || g is Mine || g is GoodBook) return BotBrain.RangeX;
+            if (g is FlameThrower) return BotBrain.FlameReach;
             AmmoType a = g.ammoType;
             return BotBrain.FireReach(a.range, a.rangeVariation, a.accuracy, a.affectedByGravity);
         }
@@ -244,6 +245,7 @@ namespace DuckBots
                 v.meleeInHand = IsMelee(held);
                 v.netGun = held is NetGun && v.holding == 1;
                 v.blastInHand = v.holding == 1 && Explodes(held);
+                v.holdFire = v.holding == 1 && held is FlameThrower;
                 v.glassGun = v.holding == 1 && !v.meleeInHand && !v.explosiveInHand
                     && !(held is NetGun) && !Blasts(held);
             }

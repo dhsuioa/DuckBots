@@ -24,6 +24,7 @@ namespace DuckBots
         public bool presentInHand;  // подарок: его открывают, а не выбрасывают
         public bool meleeInHand;    // меч, пила, кувалда: бьют вплотную, а не издалека
         public bool blastInHand;    // базука, гранатомёт, ракетница: взрыв достаёт стрелка вблизи
+        public bool holdFire;       // огнемёт: огонь идёт, только пока SHOOT зажат
         public bool breakout;       // сторож: бот топчется на месте — уйти в сторону
         public bool netted;         // бот сам в сетке: вырываться прыжками
         public bool ragdoll;        // бот в рэгдолле: тело в Ragdoll, координаты утки — на 5000 выше

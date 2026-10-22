@@ -387,7 +387,8 @@ namespace DuckBots
             // 4. Враг прямо над головой. Горизонтально его не достать — угол прицела
             // в игре не выбирается, — но в воздухе с зажатым прыжком утка машет
             // крыльями, и на взмахах ствол поднимается вверх сам. Этим и стреляем.
-            if (v.holding == 1 && v.canShootUp && !(v.blastInHand && -v.ey < BlastSafe))
+            // Огнемётом вверх не стреляют: огонь падает обратно на стрелка.
+            if (v.holding == 1 && v.canShootUp && !(v.blastInHand && -v.ey < BlastSafe) && !v.holdFire)
             {
                 s.mode = Fight;
                 s.why = WhyShootUp;
@@ -448,7 +449,9 @@ namespace DuckBots
                     m |= (ushort)(BotInput.STRAFE | (targetRight ? BotInput.LEFT : BotInput.RIGHT));
                     s.why = WhyBackOff;
                 }
-                if (Pulse(ref s.shootTimer, ShootHold, ShootGap)) m |= BotInput.SHOOT;
+                // Огнемёт выбрасывает огонь, только пока SHOOT зажат, и начинает с 5-го
+                // кадра (FlameThrower.Update): импульсы по ShootHold его не зажигали.
+                if (v.holdFire || Pulse(ref s.shootTimer, ShootHold, ShootGap)) m |= BotInput.SHOOT;
                 return m;
             }
 
