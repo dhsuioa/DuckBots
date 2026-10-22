@@ -53,6 +53,22 @@ namespace DuckBots
             for (int i = 0; i < 20; i++) if ((Decide(ref v, ref s) & BotInput.SHOOT) != 0) shot = true;
             if (!shot) return "взрывчатка: обычный ствол вплотную перестал стрелять";
 
+            // --- обычный ствол ближе KeepDist: отходит лицом к врагу и стреляет ---
+            // Без STRAFE шаг назад разворачивал утку спиной, и бот крутился на месте.
+            v = new BotView(); s = new BotState();
+            v.hasEnemy = true; v.ex = 10f; v.canShoot = true; v.holding = 1;
+            v.facingRight = true; v.grounded = true;
+            shot = false;
+            for (int i = 0; i < 20; i++)
+            {
+                ushort m = Decide(ref v, ref s);
+                if ((m & BotInput.LEFT) == 0 || (m & BotInput.STRAFE) == 0)
+                    return "отход: ствол вплотную, а бот не отходит лицом к врагу (кнопки " + m + ")";
+                if ((m & BotInput.SHOOT) != 0) shot = true;
+            }
+            if (!shot) return "отход: отходя, не стреляет";
+            if (s.why != WhyBackOff) return "причина: отход со стволом записан как «" + s.why + "»";
+
             return null;
         }
     }

@@ -439,10 +439,13 @@ namespace DuckBots
 
                 ushort m = 0;
                 s.why = WhyShoot;
-                // Отступать можно, только если за спиной не пропасть.
+                // Отступать можно, только если за спиной не пропасть. STRAFE держит утку
+                // лицом к врагу: без него шаг назад разворачивал её спиной, следующий кадр —
+                // обратно, и бот не отходил и не стрелял (в журналах 22.10 так 60–75% кадров
+                // отступления).
                 if (Math.Abs(v.ex) < KeepDist && !Abyss(ref v, targetRight ? -1 : 1))
                 {
-                    m |= targetRight ? BotInput.LEFT : BotInput.RIGHT;
+                    m |= (ushort)(BotInput.STRAFE | (targetRight ? BotInput.LEFT : BotInput.RIGHT));
                     s.why = WhyBackOff;
                 }
                 if (Pulse(ref s.shootTimer, ShootHold, ShootGap)) m |= BotInput.SHOOT;
