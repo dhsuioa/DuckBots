@@ -96,6 +96,7 @@ namespace DuckBots
             if (g == null || g.ammoType == null || IsMelee(g) || g is NetGun
                 || g is Grenade || g is Mine || g is GoodBook) return BotBrain.RangeX;
             if (g is FlameThrower) return BotBrain.FlameReach;
+            if (g is FlareGun) return BotBrain.FlareReach;
             AmmoType a = g.ammoType;
             return BotBrain.FireReach(a.range, a.rangeVariation, a.accuracy, a.affectedByGravity);
         }

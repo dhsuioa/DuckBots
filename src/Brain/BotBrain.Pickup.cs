@@ -30,6 +30,12 @@ namespace DuckBots
         // пикселях от него. Патрон у огнемёта для вида (AT9mm), по нему выходило 234.
         public const float FlameReach = 60f;
 
+        // Ракетница тоже стреляет не своим патроном, а вспышкой (Flare): 14 px за кадр,
+        // угол ±11.5° наугад и случайные толчки по вертикали. По прикидке она попадает
+        // в утку в 84% выстрелов на 60 px, в 59% на 100 и в 25% на прежних 234, а
+        // зарядов всего два.
+        public const float FlareReach = 100f;
+
         public static float FireReach(float range, float rangeVariation, float accuracy, bool gravity)
         {
             if (gravity || range <= 0f) return RangeX;
