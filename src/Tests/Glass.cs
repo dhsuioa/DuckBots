@@ -60,10 +60,11 @@ namespace DuckBots
             int facing = 1;
             BotState s = new BotState();
             bool slid = false, step = true;
+            float stepX = 0f;
             for (int f = 0; f < 90 && !slid; f++)
             {
                 float gap = GlassX - GlassReach - x, hs = d.hs;
-                ushort m = GlassFrame(f, ref step, ref d, ref x, ref facing, ref s, false, true);
+                ushort m = GlassFrame(f, ref step, ref stepX, ref d, ref x, ref facing, ref s, false, true);
                 if ((m & BotInput.SHOOT) != 0) return "стекло: без ствола жмёт SHOOT";
                 if ((m & BotInput.DOWN) == 0) continue;
                 if (gap > SlideGap || hs < 2.2f)
@@ -88,7 +89,7 @@ namespace DuckBots
             {
                 float gap = GlassX - GlassReach - x;
                 bool faced = facing > 0;
-                ushort m = GlassFrame(f, ref step, ref d, ref x, ref facing, ref s, true, true);
+                ushort m = GlassFrame(f, ref step, ref stepX, ref d, ref x, ref facing, ref s, true, true);
                 if ((m & BotInput.DOWN) != 0) return "стекло: со стволом жмёт DOWN, а не стреляет";
                 if ((m & BotInput.SHOOT) == 0) continue;
                 if (gap < ShootMin) return "стекло: стреляет с зазора " + gap + " — ствол упрётся и задерётся";
@@ -99,7 +100,7 @@ namespace DuckBots
             if (!fired) return "стекло: со стволом за секунду так и не выстрелил в стекло";
             for (int f = 60; f < 65; f++)
             {
-                ushort m = GlassFrame(f, ref step, ref d, ref x, ref facing, ref s, true, false);
+                ushort m = GlassFrame(f, ref step, ref stepX, ref d, ref x, ref facing, ref s, true, false);
                 if ((m & (BotInput.SHOOT | BotInput.DOWN)) != 0) return "стекло: разбито, а бот всё бьёт по нему";
                 if ((m & BotInput.RIGHT) == 0) return "стекло: разбито, а бот не идёт дальше";
             }
@@ -110,20 +111,30 @@ namespace DuckBots
         private const float GlassX = 200f;   // центр стекла в прогонке
 
         // Один кадр у стекла справа: обстановка, решение, физика. Стекло, пока цело,
-        // останавливает утку. Маршрут, как в игре, пересчитывается раз в десять кадров:
-        // из клетки у стекла шаг — «стекло» за него, а отошедшему на клетку — «шаг»
-        // к стеклу. Программа удара обязана пережить эту смену.
-        private static ushort GlassFrame(int f, ref bool smashStep, ref SimDuck d, ref float x, ref int facing,
-                                         ref BotState s, bool gun, bool alive)
+        // останавливает утку. Маршрут, как в игре, пересчитывается раз в десять кадров
+        // от клетки, где стоит бот, и первый шаг ведёт в соседнюю клетку (центры — на
+        // GlassX − 16 − 16k): из клетки у стекла это «стекло» за него, из остальных —
+        // «шаг» к центру следующей. Между пересчётами шаг не меняется, и разгоняющийся
+        // бот то встаёт в его центр (dx = 0), то проскакивает. Программа удара обязана
+        // это пережить: 22.10 (springs, f28222) она обрывалась на центре клетки за пару
+        // кадров до подката.
+        private static ushort GlassFrame(int f, ref bool smashStep, ref float stepX, ref SimDuck d, ref float x,
+                                         ref int facing, ref BotState s, bool gun, bool alive)
         {
-            if (f % 10 == 0) smashStep = x >= GlassX - 24f;   // бот в клетке у стекла
+            if (f % 10 == 0)
+            {
+                int k = (int)Math.Round((GlassX - 16f - x) / 16f);   // клеток до клетки у стекла
+                if (k < 0) k = 0;
+                smashStep = k == 0;
+                stepX = smashStep ? GlassX + 16f : GlassX - 16f - 16f * (k - 1);
+            }
             BotView v = new BotView();
             v.hasEnemy = true; v.ex = GlassX + 200f - x; v.grounded = true;
             v.holding = gun ? 1 : 0; v.glassGun = gun;
             v.hs = d.hs; v.speedAbs = Math.Abs(d.hs); v.facingRight = facing > 0;
             v.hasGlass = alive; v.glassDx = GlassX - x;
             v.hasEnemyStep = true;
-            v.enemyStepX = (smashStep ? GlassX + 16f : GlassX - 16f) - x;
+            v.enemyStepX = stepX - x;
             v.enemyStepEdge = smashStep ? NavMap.Smash : NavMap.Walk;
             ushort m = Decide(ref v, ref s);
             int dir = (m & BotInput.RIGHT) != 0 ? 1 : ((m & BotInput.LEFT) != 0 ? -1 : 0);
