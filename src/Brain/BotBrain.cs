@@ -74,6 +74,7 @@ namespace DuckBots
         public const string WhyMeleeHit = "бью вплотную";
         public const string WhyShoot = "стреляю: линия огня";
         public const string WhyBackOff = "стреляю и отступаю: враг вплотную";
+        public const string WhyLob = "гранатомёт: поднимаю ствол под дугу";
         public const string WhyBlastBack = "отхожу: взрывчаткой вплотную нельзя";
         public const string WhyBreakout = "сторож: ухожу в сторону";
         public const string WhyPresent = "открываю подарок";
@@ -449,6 +450,18 @@ namespace DuckBots
                     m |= (ushort)(BotInput.STRAFE | (targetRight ? BotInput.LEFT : BotInput.RIGHT));
                     s.why = WhyBackOff;
                 }
+                // Гранатомёт стреляет на отпускании SHOOT, а пока его держат, ствол
+                // поднимается (GrenadeLauncher.Update): нажать, держать до угла дуги до
+                // врага и отпустить. После выстрела ствол остывает и нажатия не слышит, а
+                // нажатие ловится по фронту — поэтому до подъёма ствола жать импульсами.
+                if (v.lobber)
+                {
+                    s.why = WhyLob;
+                    if (v.lobCooling) return m;
+                    if (!v.lobAiming) return Pulse(ref s.shootTimer, 1, 1) ? (ushort)(m | BotInput.SHOOT) : m;
+                    return v.lobAim >= v.lobAngle ? m : (ushort)(m | BotInput.SHOOT);
+                }
+
                 // Огнемёт выбрасывает огонь, только пока SHOOT зажат, и начинает с 5-го
                 // кадра (FlameThrower.Update): импульсы по ShootHold его не зажигали.
                 if (v.holdFire || Pulse(ref s.shootTimer, ShootHold, ShootGap)) m |= BotInput.SHOOT;

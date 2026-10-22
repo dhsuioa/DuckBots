@@ -233,6 +233,11 @@ namespace DuckBots
             if (dodging && !b.dodging)
                 Log(BotName(b) + ": ухожу подкатом, стрелок " + (int)b.view.threatDx + " — " + Context(b, d));
             b.dodging = dodging;
+            // Выстрел из гранатомёта (SHOOT отпущен, пока ствол поднимался) — строка: на
+            // каком угле отпустил, какой был нужен (−1 — дуги уже нет) и где враг.
+            if (b.view.lobber && b.view.lobAiming && (m & BotInput.SHOOT) == 0)
+                Log(BotName(b) + ": граната навесом угол=" + (int)b.view.lobAim + " нужен=" + b.view.lobAngle
+                    + " " + Context(b, d));
             if (b.state.mode != b.lastMode)
             {
                 Log(BotName(b) + ": режим " + (b.lastMode < 0 ? "старт" : BotBrain.modeNames[b.lastMode])

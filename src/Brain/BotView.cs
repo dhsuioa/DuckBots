@@ -25,6 +25,12 @@ namespace DuckBots
         public bool meleeInHand;    // меч, пила, кувалда: бьют вплотную, а не издалека
         public bool blastInHand;    // базука, гранатомёт, ракетница: взрыв достаёт стрелка вблизи
         public bool holdFire;       // огнемёт: огонь идёт, только пока SHOOT зажат
+        // Гранатомёт: выстрел на отпускании SHOOT, а пока его держат, ствол поднимается.
+        public bool lobber;         // в руках гранатомёт
+        public int lobAngle;        // угол ствола для дуги до врага (BotBrain.LobAngle), −1 — дуги нет
+        public float lobAim;        // нынешний угол ствола
+        public bool lobAiming;      // ствол поднимается: SHOOT нажат и держится
+        public bool lobCooling;     // после выстрела ствол остывает и нажатий не слышит
         public bool breakout;       // сторож: бот топчется на месте — уйти в сторону
         public bool netted;         // бот сам в сетке: вырываться прыжками
         public bool ragdoll;        // бот в рэгдолле: тело в Ragdoll, координаты утки — на 5000 выше

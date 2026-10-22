@@ -249,6 +249,28 @@ namespace DuckBots
                 v.holdFire = v.holding == 1 && held is FlameThrower;
                 v.glassGun = v.holding == 1 && !v.meleeInHand && !v.explosiveInHand
                     && !(held is NetGun) && !Blasts(held);
+
+                // Гранатомёт бьёт навесом: линия огня на одной высоте ему не нужна, нужна
+                // дуга до врага, которую не перегораживает стена. Взмахами вверх он не стреляет.
+                GrenadeLauncher gl = held as GrenadeLauncher;
+                if (gl != null && v.holding == 1)
+                {
+                    v.lobber = true;
+                    v.lobAim = gl._fireAngle;
+                    v.lobAiming = gl._aiming;
+                    v.lobCooling = gl._cooldown > 0f;
+                    v.lobAngle = -1;
+                    v.canShootUp = false;
+                    v.canShoot = false;
+                    if (enemy != null)
+                    {
+                        Vec2 pivot = gl.position;
+                        v.lobAngle = BotBrain.LobAngle(enemy.x - pivot.x, enemy.y - pivot.y, BotBrain.LobBarrel,
+                            (x0, y0, x1, y1) => Level.CheckLine<Block>(new Vec2(pivot.x + x0, pivot.y + y0),
+                                                                       new Vec2(pivot.x + x1, pivot.y + y1)) != null);
+                        v.canShoot = v.lobAngle >= 0;
+                    }
+                }
             }
             else if (me.holdObject != null)
             {
