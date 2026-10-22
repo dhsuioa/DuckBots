@@ -79,6 +79,16 @@ namespace DuckBots
             return g is Bazooka || g is GrenadeLauncher || g is GrenadeCannon || g is FlareGun;
         }
 
+        // Дальность выстрела из того, что в руках (BotBrain.FireReach). Холодное, сеткомёт,
+        // гранаты, мины и Библия живут по своим дистанциям — им прежняя RangeX.
+        public static float GunReach(Gun g)
+        {
+            if (g == null || g.ammoType == null || IsMelee(g) || g is NetGun
+                || g is Grenade || g is Mine || g is GoodBook) return BotBrain.RangeX;
+            AmmoType a = g.ammoType;
+            return BotBrain.FireReach(a.range, a.rangeVariation, a.accuracy, a.affectedByGravity);
+        }
+
         private static bool IsFreePresent(Thing t)
         {
             Present p = t as Present;
@@ -205,7 +215,7 @@ namespace DuckBots
                     && Math.Abs(v.ex) < BotBrain.HoverAimX
                     && Level.CheckLine<Block>(me.position, enemy.position) == null;
                 v.canShoot = Math.Abs(v.ey) < BotBrain.SameLevelY
-                    && Math.Abs(v.ex) < BotBrain.RangeX
+                    && Math.Abs(v.ex) < GunReach(me.holdObject as Gun)
                     && Level.CheckLine<Block>(me.position, enemy.position) == null
                     && Level.CheckRay<Duck>(me.position + new Vec2(v.ex > 0f ? 10f : -10f, 0f),
                                             enemy.position) == enemy;

@@ -21,5 +21,21 @@ namespace DuckBots
                 return "цель: ствол должен быть важнее гранаты";
             return null;
         }
+
+        // Дальность выстрела по патрону: снайперка бьёт далеко, дробовик — близко, неточный
+        // ствол ограничен разбросом, дуга пока не считается.
+        private static string ReachTest()
+        {
+            float r = FireReach(1000f, 0f, 1f, false);
+            if (Math.Abs(r - 984f) > 0.5f) return "дальность: снайперка (1000, точность 1) — " + r + ", ждали 984";
+            r = FireReach(250f, 0f, 0.75f, false);
+            if (Math.Abs(r - 234f) > 0.5f) return "дальность: пистолет (250, точность 0.75) — " + r + ", ждали 234";
+            r = FireReach(115f, 10f, 0.6f, false);
+            if (Math.Abs(r - 89f) > 0.5f) return "дальность: дробовик (115±10) — " + r + ", ждали 89";
+            r = FireReach(600f, 0f, 0.3f, false);
+            if (r > 120f || r < 95f) return "дальность: неточный ствол (600, точность 0.3) не ограничен разбросом — " + r;
+            if (FireReach(4000f, 0f, 1f, true) != RangeX) return "дальность: пуля с гравитацией должна остаться на RangeX";
+            return null;
+        }
     }
 }

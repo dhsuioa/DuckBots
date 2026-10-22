@@ -345,7 +345,8 @@ namespace DuckBots
             {
                 Gun g = now as Gun;
                 Log(tr.who + ": взял " + now.GetType().Name + (g != null ? " (" + g.ammo + ")" : "")
-                    + " в " + (int)d.x + "," + (int)d.y);
+                    + " в " + (int)d.x + "," + (int)d.y
+                    + (g != null ? " бьёт_на=" + (int)GunReach(g) : ""));
             }
             tr.held = now;
         }

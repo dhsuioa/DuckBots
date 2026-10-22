@@ -864,7 +864,7 @@ namespace DuckBots
                 v.grounded = false;   // оторвалась
             }
 
-            return GlassTest() ?? DodgeTest() ?? BlastTest() ?? SpringTest() ?? SettingsTest() ?? StepOffTest() ?? PickupTest();
+            return GlassTest() ?? DodgeTest() ?? BlastTest() ?? SpringTest() ?? SettingsTest() ?? StepOffTest() ?? PickupTest() ?? ReachTest();
         }
     }
 }

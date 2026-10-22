@@ -119,7 +119,7 @@ namespace DuckBots
             // Сетка летит дугой (hSpeed 10, vSpeed −1.5) и к 150 пикселям опускается
             // до уровня ствола — стрелять ближе.
             if (g is NetGun) return 112f;
-            return BotBrain.RangeX - 22f;
+            return GunReach(g) - 22f;
         }
 
         // Кандидат на подбор и почему он годится или отброшен.
