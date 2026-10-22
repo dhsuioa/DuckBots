@@ -4,7 +4,7 @@
 
 Computer-controlled ducks for [Duck Game](https://store.steampowered.com/app/312530/Duck_Game/). Fill an empty lobby with bots and play a real match, offline or online with friends who don't have the mod.
 
-![version](https://img.shields.io/badge/version-0.1%20beta-orange)
+![version](https://img.shields.io/badge/version-0.2%20beta-orange)
 [![license](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
 [![Steam Workshop](https://img.shields.io/badge/Steam%20Workshop-subscribe-1b2838?logo=steam&logoColor=white)](https://steamcommunity.com/sharedfiles/filedetails/?id=3823678387)
 [![Duck Game](https://img.shields.io/badge/Duck%20Game-mod-f2c53d)](https://store.steampowered.com/app/312530/Duck_Game/)
@@ -67,25 +67,28 @@ Open the console with `~`:
 - **PLAY ONLINE is greyed out ("FULL GAME")** with 3 or more bots in the lobby, because the game counts bots as players. Use **INVITE FRIENDS** from the pause menu instead.
 - **No free slots online.** A network lobby has a limited number of slots, and bots take them. The host can open more with **EDIT SLOTS**.
 - **Guests can't change their bots** after joining: you keep the ones you came with.
-- **Bots sometimes get stuck.** For example, a bot can bounce forever on a spring under a ceiling. Use **SKIP** online or `nextround` offline.
-- **Some weapons bots can't use well yet:**
-  - the Mind Control Ray, the RC car and the Magnet Gun;
+- **Bots sometimes still get stuck.** Use **SKIP** online or `nextround` offline.
+- **Some weapons bots can't use yet:**
+  - the Mind Control Ray, the RC car and the Magnet Gun, so bots leave them on the floor;
   - charge weapons such as the Death Ray and the Coil Gun;
   - the grenade launcher's arc.
-- **One fire range for every gun.** Bots don't yet account for each weapon's range.
 - **No equipment.** Bots don't wear armor or jetpacks.
 
 ## Roadmap
 
 The order may change based on what players report. There are no dates: each change is tested in real matches before the next one.
 
+**Done in 0.2**
+
+- [x] Bots no longer get stuck bouncing on springs under a ceiling: they steer in flight.
+- [x] An item box counts as much as a weapon lying on the floor, so bots no longer run past a nearby box to a far-away gun.
+- [x] Each weapon's own range: snipers shoot from far away, short-range guns wait until they are close.
+- [x] Bots don't pick up weapons they can't use yet (Mind Control Ray, RC car, Magnet Gun).
+
 **Next up**
 
-- [ ] Bots stop getting stuck bouncing on springs under a ceiling.
-- [ ] An item box counts as much as a weapon lying on the floor, so bots stop running past a nearby box to a far-away gun.
-- [ ] Each weapon's own range: snipers shoot from far away, short-range guns wait until they are close.
 - [ ] Aimed arcs for the grenade launcher and grenade cannon, and bullet drop for weapons affected by gravity.
-- [ ] Bots stop picking up weapons they can't use yet, and then learn the Mind Control Ray: grab an enemy and walk them off a ledge.
+- [ ] The Mind Control Ray: grab an enemy and walk them off a ledge.
 - [ ] Purple boxes: store a copy of a good weapon and take fresh copies in later rounds.
 
 **Later**
