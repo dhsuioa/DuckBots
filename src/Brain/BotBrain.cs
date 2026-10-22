@@ -12,8 +12,8 @@ namespace DuckBots
 {
     public static partial class BotBrain
     {
-        public const int Chase = 0, Fight = 1, GetGun = 2, Flee = 3, Drop = 4, Unstuck = 5, Netted = 6, Carry = 7;
-        public static readonly string[] modeNames = { "CHASE", "FIGHT", "GETGUN", "FLEE", "DROP", "UNSTUCK", "NETTED", "CARRY" };
+        public const int Chase = 0, Fight = 1, GetGun = 2, Flee = 3, Drop = 4, Unstuck = 5, Netted = 6, Carry = 7, Ragdoll = 8;
+        public static readonly string[] modeNames = { "CHASE", "FIGHT", "GETGUN", "FLEE", "DROP", "UNSTUCK", "NETTED", "CARRY", "RAGDOLL" };
 
         // Эти числа и есть настройка поведения, их крутят по ощущениям от игры.
         public const float RangeX = 150f;      // дальше бот стрелять не пробует
@@ -87,6 +87,7 @@ namespace DuckBots
         public const string WhyChase = "иду к врагу";
         public const string WhyAim = "на позиции: жду линию огня";
         public const string WhyNetted = "в сетке: рвусь наружу";
+        public const string WhyRagdoll = "в рэгдолле: встаю прыжком";
         public const string WhyCarryTrap = "несу пойманного к пропасти";
         public const string WhyThrowTrap = "бросаю пойманного в пропасть";
         public const string WhyTakeTrap = "иду за пойманным";
@@ -176,7 +177,7 @@ namespace DuckBots
             if (s.dodgeRest > 0) s.dodgeRest--;
             bool aimed = s.threatFrames > DodgeDelay;
             // Только с земли; от взрывчатки бегут, а не ложатся.
-            if (!v.grounded || s.mode == Flee || v.netted)
+            if (!v.grounded || s.mode == Flee || v.netted || v.ragdoll)
             {
                 EndDodge(ref s);
                 return m;
@@ -294,7 +295,21 @@ namespace DuckBots
 
         private static ushort Think(ref BotView v, ref BotState s)
         {
-            // 0. Бот в сетке. Пойманная утка — предмет, который враг может поднять и
+            // 0. Бот в рэгдолле. Сама утка не встаёт никогда: игра поднимает её по новому
+            // нажатию JUMP, когда тело касается земли (Ragdoll.UpdateInput). Раньше боты
+            // лежали, пока через 4 с прыжок не жал сторож, а мозг тем временем шёл к врагу
+            // от объекта утки, унесённого на 5000 пикселей вверх. Поэтому ветка первая и
+            // на остальной обзор не смотрит. Жать импульсами — Pressed ловит фронт.
+            if (v.ragdoll)
+            {
+                s.mode = Ragdoll;
+                s.why = WhyRagdoll;
+                s.jumpHold = 0;
+                s.progAt = 0;
+                return Pulse(ref s.jumpTimer, 1, 1) ? BotInput.JUMP : (ushort)0;
+            }
+
+            // Бот в сетке. Пойманная утка — предмет, который враг может поднять и
             // сбросить в пропасть; вырывается она прыжками: каждое нажатие срезает время
             // сетки, на земле вчетверо сильнее. Жать импульсами — Pressed ловит фронт,
             // поэтому начатый прыжок сбрасывается, иначе он слился бы в одно нажатие.
