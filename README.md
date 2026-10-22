@@ -86,6 +86,7 @@ The order may change based on what players report. There are no dates: each chan
 - [ ] Each weapon's own range: snipers shoot from far away, short-range guns wait until they are close.
 - [ ] Aimed arcs for the grenade launcher and grenade cannon, and bullet drop for weapons affected by gravity.
 - [ ] Bots stop picking up weapons they can't use yet, and then learn the Mind Control Ray: grab an enemy and walk them off a ledge.
+- [ ] Purple boxes: store a copy of a good weapon and take fresh copies in later rounds.
 
 **Later**
 
