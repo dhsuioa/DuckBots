@@ -4,7 +4,7 @@
 
 Computer-controlled ducks for [Duck Game](https://store.steampowered.com/app/312530/Duck_Game/). Fill an empty lobby with bots and play a real match, offline or online with friends who don't have the mod.
 
-![version](https://img.shields.io/badge/version-0.2%20beta-orange)
+![version](https://img.shields.io/badge/version-0.3%20beta-orange)
 [![license](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
 [![Steam Workshop](https://img.shields.io/badge/Steam%20Workshop-subscribe-1b2838?logo=steam&logoColor=white)](https://steamcommunity.com/sharedfiles/filedetails/?id=3823678387)
 [![Duck Game](https://img.shields.io/badge/Duck%20Game-mod-f2c53d)](https://store.steampowered.com/app/312530/Duck_Game/)
@@ -15,9 +15,9 @@ Computer-controlled ducks for [Duck Game](https://store.steampowered.com/app/312
 ## What the bots can do
 
 - **Find weapons.** A bot goes for the nearest weapon it can actually reach, measured along the path rather than in a straight line. Bots also open item boxes and presents.
-- **Get around the map.** They walk, jump, drop through one-way platforms, ride springs and teleporters and go through doors. Spikes, saws, laid mines and bottomless pits they avoid.
-- **Fight.** A bot looks for a firing position at the enemy's height and turns to face the enemy. It shoots upward while flapping, uses melee weapons up close and doesn't fire rockets point-blank.
-- **Dodge.** When someone aims at a bot, it slides under the bullet.
+- **Get around the map.** They walk, jump, drop through one-way platforms, ride springs and teleporters and go through doors. Glass in the way they break with a slide or a shot. Spikes, saws, laid mines and bottomless pits they avoid.
+- **Fight.** A bot looks for a firing position at the enemy's height and turns to face the enemy. When an enemy gets too close, it backs off while still facing them. It shoots upward while flapping and through glass, lobs grenade-launcher shots at enemies above or below, burns them with the flamethrower up close, uses melee weapons up close and doesn't fire rockets point-blank.
+- **Dodge.** When someone aims at a bot, it slides under the bullet. Knocked down, it gets straight back up.
 - **Use the net gun.** A bot catches a duck in the net, carries it to a ledge and throws it into the abyss.
 - **Play online.** When you host, bots join as your extra local players and everyone sees them as normal ducks. Your friends don't need the mod.
 
@@ -68,15 +68,24 @@ Open the console with `~`:
 - **No free slots online.** A network lobby has a limited number of slots, and bots take them. The host can open more with **EDIT SLOTS**.
 - **Guests can't change their bots** after joining: you keep the ones you came with.
 - **Bots sometimes still get stuck.** Use **SKIP** online or `nextround` offline.
+- **Spikes.** On some maps bots still jump onto spikes along their route.
 - **Some weapons bots can't use yet:**
   - the Mind Control Ray, the RC car and the Magnet Gun, so bots leave them on the floor;
   - charge weapons such as the Death Ray and the Coil Gun;
-  - the grenade launcher's arc.
+  - the grenade cannon's arc.
 - **No equipment.** Bots don't wear armor or jetpacks.
 
 ## Roadmap
 
 The order may change based on what players report. There are no dates: each change is tested in real matches before the next one.
+
+**Done in 0.3**
+
+- [x] A knocked-down bot gets back up right away instead of lying there for seconds.
+- [x] Close fights: bots back away while facing the enemy instead of spinning on the spot.
+- [x] The grenade launcher fires in an aimed arc, so bots hit enemies above and below them.
+- [x] The flamethrower and the flare gun work: bots keep the flame going up close and fire flares from a distance where they hit.
+- [x] Glass: bots break it with a slide on their way and shoot through it at enemies behind it.
 
 **Done in 0.2**
 
@@ -87,7 +96,8 @@ The order may change based on what players report. There are no dates: each chan
 
 **Next up**
 
-- [ ] Aimed arcs for the grenade launcher and grenade cannon, and bullet drop for weapons affected by gravity.
+- [ ] Bots stop jumping onto spikes.
+- [ ] The grenade cannon, and bullet drop for weapons affected by gravity.
 - [ ] The Mind Control Ray: grab an enemy and walk them off a ledge.
 - [ ] Purple boxes: store a copy of a good weapon and take fresh copies in later rounds.
 
