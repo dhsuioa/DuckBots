@@ -167,6 +167,13 @@ namespace DuckBots
         public float anchorX, anchorY;
         public int anchorFrames, breakoutFrames;
 
+        // Лобби: свои счётчики мозга (не путать с матчевыми), сколько кадров человек
+        // уже в портале, а бот нет, и что журнал видел в прошлом кадре.
+        public BotState lobbyState;
+        public int lobbyFrames;
+        public bool lobbyGlass, lobbyBeam;
+        public ProfileBox2 lobbyBox;
+
         // Журнал: режим прошлого кадра (смена пишется с причиной), сколько кадров
         // подряд ни одной кнопки, и маршрут, по которому бот шёл в прошлый раз.
         public int lastMode = -1;

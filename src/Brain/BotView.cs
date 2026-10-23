@@ -78,6 +78,25 @@ namespace DuckBots
         public bool sliding;        // утка в подкате: лежит, пока зажат DOWN
     }
 
+    // Обстановка в комнате лобби: выйти в портал вслед за человеком. Координаты — от
+    // центра утки, как в BotView.
+    public struct LobbyView
+    {
+        public bool humanReady;     // человек в портале: пора и нам
+        public bool inBeam;         // утка в портале (Duck.beammode)
+        public bool centered;       // в его центре: отсюда CANCEL выводит наружу
+        public bool glass;          // стекло комнаты цело
+        public float glassDx;
+        public bool gunHeld;        // дробовик комнаты в руках
+        public bool hasGun;         // дробовик комнаты на месте
+        public float gunDx, gunDy;
+        public int exitDir;         // в какую сторону выход из комнаты
+        public bool wallLeft, wallRight;   // стенка на уровне ног в шаге: ступенька
+        public bool grounded;
+        public float hs;
+        public bool facingRight;
+    }
+
     // Что бот помнит между кадрами. Только счётчики: решение принимается заново каждый кадр.
     public struct BotState
     {

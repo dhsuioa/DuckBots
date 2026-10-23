@@ -26,12 +26,13 @@ namespace DuckBots
         public const ushort START = 256;
         public const ushort RAGDOLL = 512;
         public const ushort STRAFE = 1024;
+        public const ushort CANCEL = 2048;   // в лобби: выйти из портала (TeamBeam)
 
         private static readonly Dictionary<string, ushort> _bits = new Dictionary<string, ushort>
         {
             { "LEFT", LEFT }, { "RIGHT", RIGHT }, { "UP", UP }, { "DOWN", DOWN },
             { "SHOOT", SHOOT }, { "JUMP", JUMP }, { "GRAB", GRAB }, { "QUACK", QUACK },
-            { "START", START }, { "RAGDOLL", RAGDOLL }, { "STRAFE", STRAFE },
+            { "START", START }, { "RAGDOLL", RAGDOLL }, { "STRAFE", STRAFE }, { "CANCEL", CANCEL },
             { "MENULEFT", LEFT }, { "MENURIGHT", RIGHT }, { "MENUUP", UP }, { "MENUDOWN", DOWN },
             { "SELECT", START }
         };

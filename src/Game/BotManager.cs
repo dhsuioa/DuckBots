@@ -154,20 +154,10 @@ namespace DuckBots
 
         // --- нажатие кнопок ---
 
-        // Живой игрок — активная коробка, которую не занял никто из наших.
-        private static bool HumanInLobby(TeamSelect2 ts)
-        {
-            List<ProfileBox2> boxes = GetBoxes(ts);
-            if (boxes == null) return false;
-            for (int i = 0; i < boxes.Count; i++)
-                if (boxes[i] != null && boxes[i].playerActive && !BoxTaken(boxes[i])) return true;
-            return false;
-        }
-
         private static void Drive()
         {
             TeamSelect2 lobby = Level.current as TeamSelect2;
-            bool human = lobby == null || HumanInLobby(lobby);
+            bool humanReady = lobby != null && HumanReady(lobby);
 
             for (int i = 0; i < bots.Count; i++)
             {
@@ -185,19 +175,10 @@ namespace DuckBots
 
                     if (d != null && lobby != null)
                     {
-                        // Готовность засчитывается по одному условию: утка покинула
-                        // комнату (cameraPosition.y < -100). Считается заново каждый
-                        // кадр, поэтому держать её снаружи надо постоянно.
-                        // Но только пока в лобби есть человек: иначе отсчёт до матча
-                        // стартует без него, и он влетает в бой прямо со входа.
-                        if (human)
-                        {
-                            // ponytail: честный путь — разбить стекло дробовиком,
-                            // это работа боевого мозга, вернуться на этапе 4.
-                            // В матче утка создаётся заново, лобби-утку не жалко.
-                            d.y = -200f;
-                            d.vSpeed = 0f;
-                        }
+                        // Готовность — утка в портале. Туда бот выходит вслед за
+                        // человеком и выходит обратно вместе с ним, иначе отсчёт до
+                        // матча начался бы без человека (BotManager.Beam).
+                        m = LobbyStep(b, d, lobby, humanReady);
                     }
                     else if (d != null && !d.dead && Level.current is GameLevel)
                     {
