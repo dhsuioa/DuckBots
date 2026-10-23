@@ -96,7 +96,27 @@ namespace DuckBots
                 _framesSinceChange = 0;
             }
 
-            // Включённые, которых ещё нет — на свободные коробки с конца.
+            // Живой игрок жмёт START на своём контроллере в коробке, где сидит бот: у коробки
+            // ввод подменён, она нажатия не видит. Бот уступает её (тот же путь, что и
+            // выключение в BOTS) и ниже садится в следующую свободную; игрок входит вторым
+            // нажатием. Тот же START у человека в своей коробке — это не вход, а совпавшая
+            // после перенастройки клавиша.
+            if (_heldFrames > 0) _heldFrames--;
+            for (int i = bots.Count - 1; i >= 0; i--)
+            {
+                Bot b = bots[i];
+                if (b.box == null || b.savedBoxInput == null || !b.savedBoxInput.Pressed("START")) continue;
+                if (HumanPressedStart(boxes)) continue;
+                Log("лобби: живой игрок жмёт START в коробке " + boxes.IndexOf(b.box)
+                    + " — бот " + (b.slot + 1) + " уступает её");
+                _heldBox = b.box;
+                _heldFrames = HeldFrames;
+                Release(b, boxes.Contains(b.box));
+                bots.RemoveAt(i);
+                _framesSinceChange = 0;
+            }
+
+            // Включённые, которых ещё нет — на свободные коробки по порядку.
             for (int s = 0; s < BotSettings.Max; s++)
             {
                 if (BotSettings.slots[s].level == 0) continue;
@@ -118,20 +138,40 @@ namespace DuckBots
             }
         }
 
-        // Слоты берём с конца, нулевой не трогаем никогда: это место человека.
+        // Коробка, которую бот только что уступил живому игроку: столько кадров её не
+        // занимать, пока он не войдёт вторым нажатием START.
+        private static ProfileBox2 _heldBox;
+        private static int _heldFrames;
+        private const int HeldFrames = 600;
+
+        // Слоты берём по порядку со второй комнаты, нулевую не трогаем никогда: это место
+        // человека. Комната N привязана к N-му контроллеру, и живому бот её уступает (SyncSlots).
         private static ProfileBox2 FindFreeBox(List<ProfileBox2> boxes)
         {
-            for (int i = boxes.Count - 1; i >= 1; i--)
+            for (int i = 1; i < boxes.Count; i++)
             {
                 ProfileBox2 box = boxes[i];
                 if (box == null || box.profile == null) continue;
                 if (box.playerActive) continue;
+                if (box == _heldBox && _heldFrames > 0) continue;
                 if (box.profile.team != null) continue;
                 if (box.profile.connection != null) continue;
                 if (BoxTaken(box)) continue;
                 return box;
             }
             return null;
+        }
+
+        private static bool HumanPressedStart(List<ProfileBox2> boxes)
+        {
+            for (int i = 0; i < boxes.Count; i++)
+            {
+                ProfileBox2 box = boxes[i];
+                if (box == null || !box.playerActive || BoxTaken(box)) continue;
+                InputProfile input = GetBoxInput(box);
+                if (input != null && input.Pressed("START")) return true;
+            }
+            return false;
         }
 
         // Новое лобби — те же профили, другие коробки. Игра сама усаживает профиль

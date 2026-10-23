@@ -39,7 +39,7 @@ DuckBots doesn't move ducks around and doesn't change the game's rules. Each bot
 
 ## How to play
 
-**Offline.** In the lobby, open the pause menu and choose **BOTS**. Each of the seven rows is one bot: switch it from `OFF` to a level. Bots take free rooms starting from the last one and never take the first room, which is yours. Your choice is remembered between launches.
+**Offline.** In the lobby, open the pause menu and choose **BOTS**. Each of the seven rows is one bot: switch it from `OFF` to a level. Bots take free rooms in order starting from the second one; the first room is yours. Each room belongs to its own controller, so if a friend presses START in a room where a bot sits, the bot moves to the next free room and your friend joins with a second press of START. Your choice is remembered between launches.
 
 <img src="assets/bots-menu.png" width="480" alt="The lobby pause menu with the BOTS item at the bottom">
 
