@@ -79,6 +79,28 @@ namespace DuckBots
         // Каким ребром пришли в узел по последнему поиску.
         public int EdgeInto(int node) { return _fromEdge[node]; }
 
+        private bool[] _mine;
+        private int[] _enemyPath;
+
+        // Где враг войдёт в ту часть карты, куда можно дойти от start: первый такой узел
+        // на его кратчайшем пути к start. Часть арены бывает островом, откуда можно только
+        // спрыгнуть: на level_8 верх отделён подъёмом в 64 пикселя, а прыжок даёт 57.
+        // −1 — враг сюда тоже не попадёт. Поиск после вызова — снова от start.
+        public int Arrival(int start, int enemy)
+        {
+            if (start < 0 || start >= _nodes || enemy < 0 || enemy >= _nodes) return -1;
+            if (_mine == null) { _mine = new bool[_nodes]; _enemyPath = new int[_nodes]; }
+            Search(start, -1);
+            for (int i = 0; i < _nodes; i++) _mine[i] = _g[i] < float.MaxValue;
+            Search(enemy, -1);
+            int n = PathTo(start, _enemyPath);
+            int arrival = -1;
+            for (int i = 0; i < n && arrival < 0; i++)
+                if (_mine[_enemyPath[i]]) arrival = _enemyPath[i];
+            Search(start, -1);
+            return arrival;
+        }
+
         private bool Linked(int node)
         {
             for (int i = 0; i < _links; i++)

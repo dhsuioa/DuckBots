@@ -155,6 +155,8 @@ namespace DuckBots
         public Thing danger;                                // от чего бежит: в журнал
         public bool atSpot;                                 // стоит на позиции для выстрела
         public int spotWait, spotOff;                       // ждёт на ней без линии; позиция забыта
+        public bool ambush;                                 // до врага нет дороги: засада у места спуска
+        public float ambushX;                               // где враг спустится к нам
         public float prevVs;                                // скорость по y в прошлом кадре: толчок пружины
         public int flightStart = -1;                        // узел над пружиной, с которой подбросило
         public bool hasThrowStep, atThrowSpot;              // несёт пойманного: путь к краю

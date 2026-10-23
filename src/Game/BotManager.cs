@@ -225,8 +225,9 @@ namespace DuckBots
                     + "→" + BotBrain.modeNames[b.state.mode] + " " + Context(b, d) + " — " + Reason(b.state));
                 b.lastMode = b.state.mode;
             }
-            // Без врагов и целей стоять не зазорно — это конец раунда.
-            if (m != 0 || d.immobilized || !(b.view.hasEnemy || b.view.hasPickup)) { b.idleFrames = 0; return; }
+            // Без врагов и целей стоять не зазорно — это конец раунда. В засаде — тоже.
+            if (m != 0 || d.immobilized || !(b.view.hasEnemy || b.view.hasPickup)
+                || b.state.why == BotBrain.WhyAmbush) { b.idleFrames = 0; return; }
             if (++b.idleFrames != IdleFrames) return;
             Log(BotName(b) + ": бездействие 3с " + Context(b, d) + " — " + Reason(b.state) + " запись=f" + frame);
             RequestDump(d, "бездействие");
