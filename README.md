@@ -1,5 +1,7 @@
 # DuckBots
 
+![DuckBots: two ducks facing off in front of a burning city](assets/preview.png)
+
 **English** · [Русский](README.ru.md)
 
 Computer-controlled ducks for [Duck Game](https://store.steampowered.com/app/312530/Duck_Game/). Fill an empty lobby with bots and play a real match, offline or online with friends who don't have the mod.
