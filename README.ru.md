@@ -1,7 +1,5 @@
 # DuckBots
 
-![DuckBots: две утки друг против друга на фоне горящего города](assets/preview.png)
-
 [English](README.md) · **Русский**
 
 Компьютерные утки для [Duck Game](https://store.steampowered.com/app/312530/Duck_Game/). Заполните пустое лобби ботами и сыграйте настоящий матч — офлайн или по сети с друзьями, у которых мода нет.
@@ -12,7 +10,7 @@
 [![Duck Game](https://img.shields.io/badge/Duck%20Game-mod-f2c53d)](https://store.steampowered.com/app/312530/Duck_Game/)
 [![issues](https://img.shields.io/github/issues/dhsuioa/DuckBots)](https://github.com/dhsuioa/DuckBots/issues)
 
-![Раунд Duck Game на восьмерых: игрок и семь ботов](assets/screenshot.png)
+![DuckBots: две утки друг против друга на фоне горящего города](assets/preview.png)
 
 ## Что умеют боты
 
@@ -22,6 +20,8 @@
 - **Уклоняются.** Когда в бота целятся, он уходит подкатом под пулю. Если его сбили с ног, сразу встаёт.
 - **Пользуются сеткомётом.** Ловят утку сеткой, несут к краю и сбрасывают в пропасть.
 - **Играют по сети.** Когда хостите вы, боты заходят как ваши дополнительные локальные игроки, и все видят их обычными утками. Друзьям мод не нужен.
+
+![Раунд Duck Game на восьмерых: игрок и семь ботов](assets/screenshot.png)
 
 ## Как это устроено
 

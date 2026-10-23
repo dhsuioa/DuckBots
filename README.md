@@ -1,7 +1,5 @@
 # DuckBots
 
-![DuckBots: two ducks facing off in front of a burning city](assets/preview.png)
-
 **English** · [Русский](README.ru.md)
 
 Computer-controlled ducks for [Duck Game](https://store.steampowered.com/app/312530/Duck_Game/). Fill an empty lobby with bots and play a real match, offline or online with friends who don't have the mod.
@@ -12,7 +10,7 @@ Computer-controlled ducks for [Duck Game](https://store.steampowered.com/app/312
 [![Duck Game](https://img.shields.io/badge/Duck%20Game-mod-f2c53d)](https://store.steampowered.com/app/312530/Duck_Game/)
 [![issues](https://img.shields.io/github/issues/dhsuioa/DuckBots)](https://github.com/dhsuioa/DuckBots/issues)
 
-![A Duck Game lobby round with eight ducks: the player and seven bots](assets/screenshot.png)
+![DuckBots: two ducks facing off in front of a burning city](assets/preview.png)
 
 ## What the bots can do
 
@@ -22,6 +20,8 @@ Computer-controlled ducks for [Duck Game](https://store.steampowered.com/app/312
 - **Dodge.** When someone aims at a bot, it slides under the bullet. Knocked down, it gets straight back up.
 - **Use the net gun.** A bot catches a duck in the net, carries it to a ledge and throws it into the abyss.
 - **Play online.** When you host, bots join as your extra local players and everyone sees them as normal ducks. Your friends don't need the mod.
+
+![A Duck Game lobby round with eight ducks: the player and seven bots](assets/screenshot.png)
 
 ## How it works
 
