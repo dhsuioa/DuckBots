@@ -9,6 +9,7 @@ namespace DuckBots
     {
         private static void DumpBots()
         {
+            if (!DetailOn) return;
             try
             {
                 Detail("мод: уровень=" + Level.current.GetType().Name);
@@ -490,6 +491,7 @@ namespace DuckBots
 
         private static void LogBrain()
         {
+            if (!DetailOn) return;
             for (int i = 0; i < bots.Count; i++)
             {
                 Bot b = bots[i];

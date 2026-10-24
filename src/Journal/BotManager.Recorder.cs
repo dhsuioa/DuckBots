@@ -91,6 +91,7 @@ namespace DuckBots
 
         private static void Dump(MoveTracer tr, string why, int frames)
         {
+            if (!DetailOn) return;
             int n = Math.Min(frames, tr.recCount);
             Detail(tr.who + ": запись событие=" + why + " кадров=" + n);
             for (int i = n; i >= 1; i--)

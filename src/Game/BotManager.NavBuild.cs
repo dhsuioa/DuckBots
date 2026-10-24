@@ -152,7 +152,7 @@ namespace DuckBots
                 Log("мир: карта проходимости " + w + "x" + h + " клеток, узлов " + nav.nodeCount
                     + ", телепортов " + links + ", стёкол " + panes + ", из них мимо центров клеток " + unseen);
                 DumpMap(nav, "первая сборка");
-                Detail("карта: предметы:" + MapThings(nav));
+                if (DetailOn) Detail("карта: предметы:" + MapThings(nav));
             }
             else if (before != null && before.width == w && before.height == h)
                 LogMapChanges(before.cells, nav);
@@ -173,7 +173,7 @@ namespace DuckBots
             for (int i = 0; i < now.Length; i++)
             {
                 if (was[i] == now[i]) continue;
-                if (++changed <= 40)
+                if (++changed <= 40 && DetailOn)
                     list.Append(' ').Append(i % nav.width).Append(',').Append(i / nav.width).Append(':')
                         .Append(CellName(was[i])).Append('→').Append(CellName(now[i])).Append(BlockAt(nav, i));
             }
@@ -241,6 +241,7 @@ namespace DuckBots
 
         private static void DumpMap(NavMap nav, string why)
         {
+            if (!DetailOn) return;
             Detail("карта: " + why + " уровень=" + MapName(Level.current) + " клеток=" + nav.width + "x"
                 + nav.height + " узлов=" + nav.nodeCount + " начало=" + (int)nav.originX + ","
                 + (int)nav.originY + " клетка=16 — # стена, | стекло, = платформа, ^ смерть, S < > \\ / пружины,"

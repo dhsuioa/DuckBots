@@ -80,6 +80,9 @@ namespace DuckBots
             catch (Exception) { }
         }
 
+        // Подробный журнал пишется: выключен — строки для него не собирать.
+        private static bool DetailOn { get { return _detailLog != null && _detailBytes <= DetailCap; } }
+
         public static void Detail(string msg)
         {
             if (_detailLog == null || _detailBytes > DetailCap) return;

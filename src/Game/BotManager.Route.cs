@@ -167,7 +167,7 @@ namespace DuckBots
                     + " путь=" + (int)_cands[best].len) + (routed ? "" : " по прямой: карты нет")
                 + " кандидатов=" + _cands.Count + " годных=" + usable
                 + " было=" + (b.pickup == null ? "нет" : b.pickup.GetType().Name));
-            for (int i = 0; i < _cands.Count; i++)
+            for (int i = 0; i < _cands.Count && DetailOn; i++)
             {
                 Candidate c = _cands[i];
                 float dx = c.thing.x - me.x, dy = c.thing.y - me.y;
@@ -183,6 +183,7 @@ namespace DuckBots
         // «своя_клетка=нет» — бот стоит на том, чего карта не видит: выступ, тонкий блок, ящик, утка.
         private static void LogPath(Bot b, Duck me, int start, int goal, string to)
         {
+            if (!DetailOn) return;
             int n = _nav.PathTo(goal, _pathBuf);
             int same = 0;
             while (same < n && same < b.pathLen && _pathBuf[same] == b.path[same]) same++;
