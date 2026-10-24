@@ -131,6 +131,8 @@ namespace DuckBots
         {
             TeamSelect2 lobby = Level.current as TeamSelect2;
             bool humanReady = lobby != null && HumanReady(lobby);
+            // Карта — одна на всех ботов, перебор клеток раз в NavRebuild кадров.
+            if (bots.Count > 0 && Level.current is GameLevel) EnsureNav();
 
             for (int i = 0; i < bots.Count; i++)
             {

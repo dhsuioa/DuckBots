@@ -52,7 +52,6 @@ namespace DuckBots
         private static BotView Look(Bot b, Duck me)
         {
             BotView v = new BotView();
-            EnsureNav();
             v.facingRight = me.offDir > 0;
             v.grounded = me.grounded;
             v.speedAbs = Math.Abs(me.hSpeed);

@@ -9,7 +9,7 @@ namespace DuckBots
     {
         private const float NavCell = 16f;   // шаг сетки уровня
         private const int RouteEvery = 10;
-        private const int NavRebuild = 180;
+        private const int NavRebuild = 60;   // кадров между переборами клеток уровня
 
         private static NavMap _nav;
         private static Level _navLevel;
