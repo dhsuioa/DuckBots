@@ -59,56 +59,24 @@ namespace DuckBots
             b.routeStartX = _nav.CellX(start);
             int enemyNode = enemy == null ? -1 : _nav.NodeNear(enemy.x, enemy.y);
             string to = enemy == null ? "нет" : "враг";
-            b.atSpot = false;
-
-            // Враг там, куда отсюда дороги нет, а сам спуститься может: на level_8 верх карты
-            // снизу недостижим (подъём 64 пикселя, прыжок даёт 57). Раньше бот шёл к нему по
-            // прямой — вставал под ним и прыгал в полку (23.10, скриншот человека). Теперь
-            // засада: цель — место, где враг войдёт в нашу часть карты по пути к боту.
-            bool wasAmbush = b.ambush;
-            b.ambush = false;
-            float aimX = enemy == null ? 0f : enemy.x, aimFeet = enemy == null ? 0f : enemy.bottom;
-            int arrival = -1;
-            if (enemyNode >= 0 && _nav.RouteLength(enemyNode) >= float.MaxValue)
-                arrival = _nav.Arrival(start, enemyNode);
-            if (arrival >= 0)
-            {
-                b.ambush = true;
-                enemyNode = arrival;
-                b.atSpot = arrival == start;
-                aimX = b.ambushX = _nav.CellX(arrival);
-                aimFeet = _nav.CellY(arrival) + NavCell / 2f;
-                to = "засада: место спуска";
-            }
-
             // Со стволом идти не к врагу, а на позицию для выстрела: та же высота,
             // дистанция, чистая линия. Раньше все шли в точку врага и сходились там;
             // вооружённые боты 157 раз из 181 гнались за врагом на другой высоте.
+            b.atSpot = false;
             float range = FireRange(me);
             if (enemyNode >= 0 && range > 0f && b.spotOff == 0)   // spotOff — см. Look
             {
                 // Со взрывчаткой позиция не ближе BlastSafe: вплотную взрыв достаёт стрелка.
                 Gun held = me.holdObject as Gun;
                 float near = held != null && Explodes(held) ? BotBrain.BlastSafe : range < 100f ? 16f : 32f;
-                int spot = _nav.FiringNode(aimX, aimFeet, near, range);
+                int spot = _nav.FiringNode(enemy.x, enemy.bottom, near, range);
                 if (spot >= 0)
                 {
                     enemyNode = spot;
                     b.atSpot = spot == start;
-                    to = b.ambush ? "засада: позиция для выстрела" : "позиция для выстрела";
-                }
-                else if (b.ambush)
-                {
-                    // Стрелять к месту спуска неоткуда — ждать, где стоим, лицом к нему: идти
-                    // под полку, с которой он спрыгнет, — та самая прежняя ошибка.
-                    enemyNode = start;
-                    b.atSpot = true;
-                    to = "засада: жду на месте";
+                    to = "позиция для выстрела";
                 }
             }
-            if (b.ambush && !wasAmbush)
-                Log(BotName(b) + ": засада — до врага нет дороги, спустится в " + _nav.CellCol(arrival) + ","
-                    + _nav.CellRow(arrival) + ", цель=" + to + " — " + Context(b, me));
             b.hasEnemyStep = _nav.FirstStep(start, enemyNode,
                 out b.enemyStepX, out b.enemyStepY, out b.enemyStepEdge, out b.enemyStepProg);
             int goal = enemyNode;

@@ -340,8 +340,7 @@ namespace DuckBots
             // считает застревание по пути к цели, а не ожидание. Простоял на позиции без
             // линии дольше SpotPatience — позицию на время забыть и идти к врагу по
             // маршруту: толчок открывает дверь.
-            // Засада ждёт, сколько нужно: дорогу к врагу дверь не откроет.
-            if (b.atSpot && !b.ambush && !v.canShoot && !v.canShootUp) b.spotWait++;
+            if (b.atSpot && !v.canShoot && !v.canShootUp) b.spotWait++;
             else b.spotWait = 0;
             if (b.spotWait > SpotPatience)
             {
@@ -398,8 +397,6 @@ namespace DuckBots
             v.pickupStepEdge = b.pickupStepEdge;
             v.pickupStepProg = b.pickupStepProg;
             v.atSpot = b.atSpot;
-            v.ambush = b.ambush;
-            v.ambushDx = b.ambushX - me.x;
 
             v.breakout = b.breakoutFrames > 0;
             return v;
@@ -441,11 +438,10 @@ namespace DuckBots
             if (b.breakoutFrames > 0) { b.breakoutFrames--; b.anchorFrames = 0; return; }
 
             int mode = b.state.mode;
-            // Идёт к цели — значит должен сдвигаться. Стоять, когда врагов не осталось,
-            // бот ждёт линию огня на позиции или сидит в засаде, — не залипание.
+            // Идёт к цели — значит должен сдвигаться. Стоять, когда врагов не осталось
+            // или бот ждёт линию огня на позиции, — не залипание.
             bool going = mode == BotBrain.GetGun || mode == BotBrain.Carry
-                || (mode == BotBrain.Chase && b.view.hasEnemy && b.state.why != BotBrain.WhyAim
-                    && b.state.why != BotBrain.WhyAmbush);
+                || (mode == BotBrain.Chase && b.view.hasEnemy && b.state.why != BotBrain.WhyAim);
             bool moved = d.grounded
                 && Math.Abs(d.x - b.anchorX) + Math.Abs(d.bottom - b.anchorY) > 32f;
             bool frozen = d.immobilized;

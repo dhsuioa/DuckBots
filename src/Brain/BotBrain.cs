@@ -88,7 +88,6 @@ namespace DuckBots
         public const string WhyStack = "расходимся: враг сверху или снизу";
         public const string WhyChase = "иду к врагу";
         public const string WhyAim = "на позиции: жду линию огня";
-        public const string WhyAmbush = "засада: до врага нет дороги, жду, пока спустится";
         public const string WhyNetted = "в сетке: рвусь наружу";
         public const string WhyRagdoll = "в рэгдолле: встаю прыжком";
         public const string WhyCarryTrap = "несу пойманного к пропасти";
@@ -575,16 +574,11 @@ namespace DuckBots
             // дистанция, чистая линия (NavMap.FiringNode). Дошёл, а линии пока нет —
             // развернуться к врагу и ждать, а не лезть к нему: раньше все шли в точку
             // врага и сходились там, где стрелять уже поздно.
-            // В засаде — так же, но лицом к месту, где враг спустится: сам он над головой,
-            // и раньше бот без маршрута шёл под него и прыгал в полку. Место спуска под
-            // ногами (ближе полуклетки) — поворачиваться не к чему.
-            if ((v.holding == 1 || v.ambush) && v.atSpot)
+            if (v.holding == 1 && v.atSpot)
             {
-                s.why = v.ambush ? WhyAmbush : WhyAim;
-                float side = v.ambush ? v.ambushDx : v.ex;
-                bool right = side > 0f;
-                if (right != v.facingRight && !(v.ambush && Math.Abs(side) < 8f))
-                    return right ? BotInput.RIGHT : BotInput.LEFT;
+                s.why = WhyAim;
+                bool right = v.ex > 0f;
+                if (right != v.facingRight) return right ? BotInput.RIGHT : BotInput.LEFT;
                 s.how = HowHere;
                 return 0;
             }
