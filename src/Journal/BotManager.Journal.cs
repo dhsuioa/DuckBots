@@ -474,9 +474,12 @@ namespace DuckBots
                 + " обходом=" + _humanDetour
                 + "; боты: прыжков=" + _botJumps + " промахов=" + _botMisses
                 + " сторож=" + _watchdogFired + " смертей=" + _botDeaths
-                + " в_пропасть=" + _botFalls + " падений=" + _botDrops);
+                + " в_пропасть=" + _botFalls + " падений=" + _botDrops
+                + "; карта: перестроек=" + _navBuilds + " перебор_макс=" + F1(_navScanMax)
+                + "мс сборка_макс=" + F1(_navBuildMax) + "мс");
             _humanMoves = _humanNoPath = _humanDetour = _botJumps = _botMisses = 0;
-            _watchdogFired = _botDeaths = _botFalls = _botDrops = 0;
+            _watchdogFired = _botDeaths = _botFalls = _botDrops = _navBuilds = 0;
+            _navScanMax = _navBuildMax = 0;
         }
 
         private static string RouteWord(BotView v)

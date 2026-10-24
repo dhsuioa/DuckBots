@@ -15,6 +15,10 @@ namespace DuckBots
         private static Level _navLevel;
         private static int _navFrames;
         private static bool _navReported;
+        // Сколько стоят перебор клеток и сборка карты: в журнал, за раунд — перестройки и худшее время.
+        private static readonly System.Diagnostics.Stopwatch _navWatch = new System.Diagnostics.Stopwatch();
+        private static int _navBuilds;
+        private static float _navScanMax, _navBuildMax;
 
         // Порядок важен: смерть перебивает опору, пружина — пустоту, дверь — стену.
         private static byte Classify(Vec2 p)
@@ -86,6 +90,7 @@ namespace DuckBots
                 return;
             }
 
+            _navWatch.Restart();
             byte[] cells = new byte[w * h];
             for (int y = 0; y < h; y++)
                 for (int x = 0; x < w; x++)
@@ -124,6 +129,8 @@ namespace DuckBots
                     }
                 if (!seen) unseen++;
             }
+            float scan = (float)_navWatch.Elapsed.TotalMilliseconds;
+            if (scan > _navScanMax) _navScanMax = scan;
 
             // Клетки те же — карта та же: сборка с симуляцией прыжков стоит десятки мс.
             // ponytail: изменение одной клетки пересобирает всю карту; разбить сборку
@@ -132,6 +139,7 @@ namespace DuckBots
             if (sameLevel && _nav != null && _nav.width == w && _nav.height == h && SameCells(_nav.cells, cells))
                 return;
 
+            _navWatch.Restart();
             NavMap nav = new NavMap();
             nav.Build(cells, w, h, NavCell, tl.x, oy, glass);
 
@@ -143,6 +151,9 @@ namespace DuckBots
                 nav.AddLink(tp.x, tp.y, tp.link.x, tp.link.y);
                 links++;
             }
+            float build = (float)_navWatch.Elapsed.TotalMilliseconds;
+            _navBuilds++;
+            if (build > _navBuildMax) _navBuildMax = build;
 
             NavMap before = sameLevel ? _nav : null;
             _nav = nav;
@@ -150,12 +161,13 @@ namespace DuckBots
             {
                 _navReported = true;
                 Log("мир: карта проходимости " + w + "x" + h + " клеток, узлов " + nav.nodeCount
-                    + ", телепортов " + links + ", стёкол " + panes + ", из них мимо центров клеток " + unseen);
+                    + ", телепортов " + links + ", стёкол " + panes + ", из них мимо центров клеток " + unseen
+                    + ", перебор " + F1(scan) + " мс, сборка " + F1(build) + " мс");
                 DumpMap(nav, "первая сборка");
                 if (DetailOn) Detail("карта: предметы:" + MapThings(nav));
             }
             else if (before != null && before.width == w && before.height == h)
-                LogMapChanges(before.cells, nav);
+                LogMapChanges(before.cells, nav, build);
         }
 
         private static bool SameCells(byte[] a, byte[] b)
@@ -165,7 +177,7 @@ namespace DuckBots
             return true;
         }
 
-        private static void LogMapChanges(byte[] was, NavMap nav)
+        private static void LogMapChanges(byte[] was, NavMap nav, float build)
         {
             byte[] now = nav.cells;
             int changed = 0;
@@ -178,7 +190,7 @@ namespace DuckBots
                         .Append(CellName(was[i])).Append('→').Append(CellName(now[i])).Append(BlockAt(nav, i));
             }
             if (changed == 0) return;
-            Log("мир: карта изменилась клеток=" + changed + " запись=f" + frame);
+            Log("мир: карта изменилась клеток=" + changed + " сборка=" + F1(build) + "мс запись=f" + frame);
             Detail("мир: изменения" + list + (changed > 40 ? " …" : ""));
             DumpMap(nav, "после изменений");
         }
