@@ -40,8 +40,7 @@ namespace DuckBots
             s.smashFrames++;
             s.stuckFrames = 0;
             float gap = Math.Abs(v.glassDx) - GlassReach;
-            ushort toward = dir > 0 ? BotInput.RIGHT : BotInput.LEFT;
-            ushort away = dir > 0 ? BotInput.LEFT : BotInput.RIGHT;
+            ushort toward = Toward(dir > 0), away = Toward(dir < 0);
             bool room = dir > 0 ? !v.gapLeft : !v.gapRight;
             bool shoot = v.glassGun && s.smashTries == 0;
             if (!s.smashRun)

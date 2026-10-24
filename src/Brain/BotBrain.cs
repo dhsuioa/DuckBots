@@ -20,6 +20,7 @@ namespace DuckBots
         public const float DangerR = 75f;
         public const float HoverReach = 90f;
         public const float HoverAimX = 16f;
+        public const int HoverTap = 3;         // подскок перед взмахами
         public const int ShootHold = 3, ShootGap = 8;
         public const int GrabGap = 12;
         // Высота прыжка — длина удержания: Released(Jump) режет скорость вверх вдвое.
@@ -93,17 +94,12 @@ namespace DuckBots
             // земли: подбросило — программу бросить, дальше рулит ребро полёта (Launch).
             if (v.kicked) { s.progAt = 0; s.jumpHold = 0; s.stuckFrames = 0; }
             ushort m = Think(ref v, ref s);
-            m = Dodge(m, ref v, ref s);
-            if (s.jumpHold > 0)
-            {
-                m |= BotInput.JUMP;
-                if (--s.jumpHold == 0) s.jumpRest = JumpRest;
-            }
+            m = HoldJump(Dodge(m, ref v, ref s), ref s);
             // Пока идёт программа прыжка ребра, направление и прыжок жмёт только она — как её прогнала карта.
             if (s.progAt > 0)
             {
                 int f = s.progAt - 1;
-                if ((f > 1 && v.grounded) || f > 240)
+                if ((f > 1 && v.grounded) || f > NavMap.MaxFlight)
                 {
                     s.progAt = 0;
                     s.jumpRest = JumpRest;
@@ -119,6 +115,34 @@ namespace DuckBots
                 }
             }
             return m;
+        }
+
+        private static ushort HoldJump(ushort m, ref BotState s)
+        {
+            if (s.jumpHold > 0)
+            {
+                m |= BotInput.JUMP;
+                if (--s.jumpHold == 0) s.jumpRest = JumpRest;
+            }
+            return m;
+        }
+
+        private static ushort Toward(bool right) { return right ? BotInput.RIGHT : BotInput.LEFT; }
+
+        // Шаг прочь от цели лицом к ней: без STRAFE шаг назад разворачивает утку спиной.
+        private static ushort Backward(bool targetRight)
+        {
+            return (ushort)(BotInput.STRAFE | Toward(!targetRight));
+        }
+
+        private static ushort Grab(ref BotState s) { return Pulse(ref s.grabTimer, 1, GrabGap) ? BotInput.GRAB : (ushort)0; }
+
+        // Блуждание пачками кадров: направление держится WanderFrames, потом разворот.
+        private static void TurnWander(ref BotState s, bool facingRight)
+        {
+            if (s.wanderFrames > 0) return;
+            s.wanderFrames = WanderFrames;
+            s.wanderDir = s.wanderDir == 0 ? (facingRight ? 1 : -1) : -s.wanderDir;
         }
 
         // Pressed ловит фронт: перед новым прыжком кнопка должна побыть отпущенной.
@@ -176,21 +200,12 @@ namespace DuckBots
         private static ushort Think(ref BotView v, ref BotState s)
         {
             // Из рэгдолла игра поднимает утку по новому нажатию JUMP, когда тело на земле
-            // (Ragdoll.UpdateInput). Координаты утки при этом на 5000 выше — остальной обзор врёт.
-            if (v.ragdoll)
+            // (Ragdoll.UpdateInput), а координаты утки при этом на 5000 выше — остальной обзор врёт.
+            // В сетке каждое нажатие прыжка срезает её время.
+            if (v.ragdoll || v.netted)
             {
-                s.mode = Ragdoll;
-                s.why = WhyRagdoll;
-                s.jumpHold = 0;
-                s.progAt = 0;
-                return Pulse(ref s.jumpTimer, 1, 1) ? BotInput.JUMP : (ushort)0;
-            }
-
-            // Каждое нажатие прыжка срезает время сетки.
-            if (v.netted)
-            {
-                s.mode = Netted;
-                s.why = WhyNetted;
+                s.mode = v.ragdoll ? Ragdoll : Netted;
+                s.why = v.ragdoll ? WhyRagdoll : WhyNetted;
                 s.jumpHold = 0;
                 s.progAt = 0;
                 return Pulse(ref s.jumpTimer, 1, 1) ? BotInput.JUMP : (ushort)0;
@@ -204,9 +219,9 @@ namespace DuckBots
                 if (v.hasEnemy)
                 {
                     bool toRight = v.ex > 0f;
-                    if (toRight != v.facingRight) return toRight ? BotInput.RIGHT : BotInput.LEFT;
+                    if (toRight != v.facingRight) return Toward(toRight);
                 }
-                return Pulse(ref s.grabTimer, 1, GrabGap) ? BotInput.GRAB : (ushort)0;
+                return Grab(ref s);
             }
 
             if (v.danger)
@@ -223,7 +238,7 @@ namespace DuckBots
                     s.mode = Fight;
                     s.why = WhyArm;
                     bool toRight = v.ex > 0f;
-                    if (toRight != v.facingRight) return toRight ? BotInput.RIGHT : BotInput.LEFT;
+                    if (toRight != v.facingRight) return Toward(toRight);
                     return Pulse(ref s.shootTimer, 1, ShootGap) ? BotInput.SHOOT : (ushort)0;
                 }
                 s.mode = Chase;
@@ -241,7 +256,7 @@ namespace DuckBots
                 if (v.atThrowSpot)
                 {
                     s.why = WhyThrowTrap;
-                    ushort toward = v.throwDir > 0 ? BotInput.RIGHT : BotInput.LEFT;
+                    ushort toward = Toward(v.throwDir > 0);
                     if ((v.throwDir > 0) != v.facingRight) return toward;
                     return Pulse(ref s.grabTimer, 1, GrabGap) ? (ushort)(toward | BotInput.GRAB) : (ushort)0;
                 }
@@ -259,7 +274,7 @@ namespace DuckBots
                 s.mode = Fight;
                 s.why = WhyShootUp;
                 ushort up = 0;
-                if (v.grounded) StartJump(ref s, 3, true, WhyShootUp, 0f, 0f);
+                if (v.grounded) StartJump(ref s, HoverTap, true, WhyShootUp, 0f, 0f);
                 else if (s.jumpHold == 0 && s.jumpRest == 0) up |= BotInput.JUMP;
                 if (Pulse(ref s.shootTimer, ShootHold, ShootGap)) up |= BotInput.SHOOT;
                 return up;
@@ -272,7 +287,7 @@ namespace DuckBots
                 if (targetRight != v.facingRight)
                 {
                     s.why = WhyTurn;
-                    return targetRight ? BotInput.RIGHT : BotInput.LEFT;
+                    return Toward(targetRight);
                 }
 
                 // Холодное для игры — Gun с патронами, но бьёт только вплотную.
@@ -287,26 +302,25 @@ namespace DuckBots
                     return Pulse(ref s.shootTimer, ShootHold, ShootGap) ? BotInput.SHOOT : (ushort)0;
                 }
 
-                // STRAFE держит утку лицом к врагу: без него шаг назад разворачивает её спиной.
                 if (v.blastInHand && Math.Abs(v.ex) < BlastSafe)
                 {
                     s.why = WhyBlastBack;
                     if (Abyss(ref v, targetRight ? -1 : 1)) return 0;
-                    return (ushort)(BotInput.STRAFE | (targetRight ? BotInput.LEFT : BotInput.RIGHT));
+                    return Backward(targetRight);
                 }
 
                 if (v.glassLine && v.hasGlass && (v.glassDx > 0f) == targetRight
                     && Math.Abs(v.glassDx) - GlassReach < ShootMin && !Abyss(ref v, targetRight ? -1 : 1))
                 {
                     s.why = WhyGlassBack;
-                    return (ushort)(BotInput.STRAFE | (targetRight ? BotInput.LEFT : BotInput.RIGHT));
+                    return Backward(targetRight);
                 }
 
                 ushort m = 0;
                 s.why = WhyShoot;
                 if (Math.Abs(v.ex) < KeepDist && !Abyss(ref v, targetRight ? -1 : 1))
                 {
-                    m |= (ushort)(BotInput.STRAFE | (targetRight ? BotInput.LEFT : BotInput.RIGHT));
+                    m |= Backward(targetRight);
                     s.why = WhyBackOff;
                 }
                 // Нажатие ловится по фронту, а остывающий ствол его не слышит: до подъёма ствола — импульсы.
@@ -329,7 +343,7 @@ namespace DuckBots
                 if (v.holding != 0)
                 {
                     s.why = WhyFreeHands;
-                    return Pulse(ref s.grabTimer, 1, GrabGap) ? BotInput.GRAB : (ushort)0;
+                    return Grab(ref s);
                 }
                 s.why = WhyTakeTrap;
                 ushort take = GoToPickup(ref v, ref s);
@@ -342,7 +356,7 @@ namespace DuckBots
             {
                 s.mode = Drop;
                 s.why = WhyDropNet;
-                return Pulse(ref s.grabTimer, 1, GrabGap) ? BotInput.GRAB : (ushort)0;
+                return Grab(ref s);
             }
 
             if (v.breakout)
@@ -366,7 +380,7 @@ namespace DuckBots
             {
                 s.mode = Drop;
                 s.why = WhyJunk;
-                return Pulse(ref s.grabTimer, 1, GrabGap) ? BotInput.GRAB : (ushort)0;
+                return Grab(ref s);
             }
 
             if (v.holding != 1 && v.hasPickup)
@@ -402,7 +416,7 @@ namespace DuckBots
             {
                 s.why = WhyAim;
                 bool right = v.ex > 0f;
-                if (right != v.facingRight) return right ? BotInput.RIGHT : BotInput.LEFT;
+                if (right != v.facingRight) return Toward(right);
                 s.how = HowHere;
                 return 0;
             }
@@ -412,16 +426,12 @@ namespace DuckBots
 
         private static ushort Sidestep(ref BotView v, ref BotState s)
         {
-            if (s.wanderFrames <= 0)
-            {
-                s.wanderFrames = WanderFrames;
-                s.wanderDir = s.wanderDir == 0 ? (v.facingRight ? 1 : -1) : -s.wanderDir;
-            }
+            TurnWander(ref s, v.facingRight);
             s.wanderFrames--;
             if (Abyss(ref v, s.wanderDir)) s.wanderDir = -s.wanderDir;
             if (Abyss(ref v, s.wanderDir)) { s.how = HowAbyss; return 0; }
             s.how = HowSidestep;
-            return s.wanderDir > 0 ? BotInput.RIGHT : BotInput.LEFT;
+            return Toward(s.wanderDir > 0);
         }
 
         // Есть маршрут — шаг говорит, что делать: пройти, прыгнуть, провалиться. Нет — догадки:
@@ -475,11 +485,7 @@ namespace DuckBots
                 int side = v.gapLeft == v.gapRight ? 0 : (v.gapRight ? 1 : -1);
                 if (side == 0 || Abyss(ref v, side))
                 {
-                    if (s.wanderFrames <= 0)
-                    {
-                        s.wanderFrames = WanderFrames;
-                        s.wanderDir = s.wanderDir == 0 ? (v.facingRight ? 1 : -1) : -s.wanderDir;
-                    }
+                    TurnWander(ref s, v.facingRight);
                     s.wanderFrames--;
                     if (Abyss(ref v, s.wanderDir)) s.wanderDir = -s.wanderDir;
                     side = s.wanderDir;
@@ -487,16 +493,12 @@ namespace DuckBots
                 s.stuckFrames = 0;
                 if (Abyss(ref v, side)) { s.how = HowAbyss; return 0; }
                 s.how = HowStepOff;
-                return side > 0 ? BotInput.RIGHT : BotInput.LEFT;
+                return Toward(side > 0);
             }
 
             if (!routed && dir == 0 && (wantUp || wantDown))
             {
-                if (s.wanderFrames <= 0)
-                {
-                    s.wanderFrames = WanderFrames;
-                    s.wanderDir = s.wanderDir == 0 ? (v.facingRight ? 1 : -1) : -s.wanderDir;
-                }
+                TurnWander(ref s, v.facingRight);
                 dir = s.wanderDir;
                 s.how = HowWander;
             }

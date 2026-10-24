@@ -56,7 +56,7 @@ namespace DuckBots
             }
             s.how = HowDodgeRun;
             return (ushort)((m & unchecked((ushort)~(BotInput.LEFT | BotInput.RIGHT | BotInput.JUMP | BotInput.DOWN)))
-                | (s.dodgeDir > 0 ? BotInput.RIGHT : BotInput.LEFT));
+                | Toward(s.dodgeDir > 0));
         }
 
         private static void EndDodge(ref BotState s)

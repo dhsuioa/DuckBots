@@ -9,6 +9,7 @@ namespace DuckBots
         // взмахи с кадра hover. Карта прогоняет её физикой игры (DuckPhysics), бот проигрывает
         // дословно. Упакована в int, чтобы ехать в BotView без мусора.
         public const int Forever = 63;   // dirTo: жать направление до приземления
+        public const int MaxFlight = 240;   // кадров: дольше полёт не ждём
 
         public static int Prog(int dir, int hold, int dirFrom, int dirTo, int hover)
         {
@@ -91,7 +92,7 @@ namespace DuckBots
             d.grounded = true;
             d.groundValid = 7;
             float mapBottom = _originY + _h * _cell;
-            for (int f = 0; f < 240; f++)
+            for (int f = 0; f < MaxFlight; f++)
             {
                 DuckPhysics.Controls(ref d, ProgDirAt(prog, f), ProgJumpAt(prog, f));
 

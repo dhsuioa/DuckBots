@@ -16,13 +16,7 @@ namespace DuckBots
         public static ushort Lobby(ref LobbyView v, ref BotState s)
         {
             if (s.jumpRest > 0) s.jumpRest--;
-            ushort m = LobbyThink(ref v, ref s);
-            if (s.jumpHold > 0)
-            {
-                m |= BotInput.JUMP;
-                if (--s.jumpHold == 0) s.jumpRest = JumpRest;
-            }
-            return m;
+            return HoldJump(LobbyThink(ref v, ref s), ref s);
         }
 
         private static ushort LobbyThink(ref LobbyView v, ref BotState s)
@@ -39,17 +33,15 @@ namespace DuckBots
             if (v.glass && !v.gunHeld && v.hasGun)
             {
                 s.why = WhyLobbyGun;
-                if (InGrabReach(v.gunDx, v.gunDy))
-                    return Pulse(ref s.grabTimer, 1, GrabGap) ? BotInput.GRAB : (ushort)0;
+                if (InGrabReach(v.gunDx, v.gunDy)) return Grab(ref s);
                 return LobbyWalk(v.gunDx > 0f ? 1 : -1, ref v, ref s);
             }
             if (v.glass && v.gunHeld)
             {
                 s.why = WhyLobbyShoot;
                 bool toRight = v.glassDx > 0f;
-                if (toRight != v.facingRight) return toRight ? BotInput.RIGHT : BotInput.LEFT;
-                if (Math.Abs(v.glassDx) - GlassReach < ShootMin)
-                    return (ushort)(BotInput.STRAFE | (toRight ? BotInput.LEFT : BotInput.RIGHT));
+                if (toRight != v.facingRight) return Toward(toRight);
+                if (Math.Abs(v.glassDx) - GlassReach < ShootMin) return Backward(toRight);
                 return Pulse(ref s.shootTimer, ShootHold, ShootGap) ? BotInput.SHOOT : (ushort)0;
             }
             // Без дробовика тоже к выходу: упрётся в стекло — заберёт запасной путь (BeamPatience).
@@ -61,7 +53,7 @@ namespace DuckBots
         private static ushort LobbyWalk(int dir, ref LobbyView v, ref BotState s)
         {
             if (dir > 0 ? v.wallRight : v.wallLeft) StartJump(ref s, JumpTap, v.grounded, s.why, 0f, 0f);
-            return dir > 0 ? BotInput.RIGHT : BotInput.LEFT;
+            return Toward(dir > 0);
         }
     }
 }
