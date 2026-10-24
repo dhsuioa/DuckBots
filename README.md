@@ -4,6 +4,10 @@
 
 Computer-controlled ducks for [Duck Game](https://store.steampowered.com/app/312530/Duck_Game/). Fill an empty lobby with bots and play a real match, offline or online with friends who don't have the mod.
 
+The goal is to lower the barrier to entry. A newcomer can learn the game and play full matches against bots instead of being thrown straight at veterans online, and anyone can play when there's nobody online.
+
+AI is used in the development of this mod.
+
 ![version](https://img.shields.io/badge/version-0.3.1%20beta-orange)
 [![license](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
 [![Steam Workshop](https://img.shields.io/badge/Steam%20Workshop-subscribe-1b2838?logo=steam&logoColor=white)](https://steamcommunity.com/sharedfiles/filedetails/?id=3823678387)

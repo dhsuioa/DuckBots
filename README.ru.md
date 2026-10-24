@@ -4,6 +4,10 @@
 
 Компьютерные утки для [Duck Game](https://store.steampowered.com/app/312530/Duck_Game/). Заполните пустое лобби ботами и сыграйте настоящий матч — офлайн или по сети с друзьями, у которых мода нет.
 
+Цель — снизить порог входа в игру. Новичок может освоиться и сыграть полноценные матчи против ботов, а не сразу попасть к опытным игрокам в онлайне, а сыграть можно и тогда, когда в онлайне никого нет.
+
+Для разработки мода используется ИИ.
+
 ![version](https://img.shields.io/badge/version-0.3.1%20beta-orange)
 [![license](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
 [![Steam Workshop](https://img.shields.io/badge/Steam%20Workshop-subscribe-1b2838?logo=steam&logoColor=white)](https://steamcommunity.com/sharedfiles/filedetails/?id=3823678387)
