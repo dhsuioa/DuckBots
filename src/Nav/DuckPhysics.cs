@@ -1,16 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
-using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Text;
-using DuckGame;
-using HarmonyLib;
 
 namespace DuckBots
 {
-    // Утка в симуляции: положение, скорости и то, что игра помнит между кадрами.
     public struct SimDuck
     {
         public float x, bottom, hs, vs;
@@ -18,18 +9,15 @@ namespace DuckBots
         public int groundValid, jumpValid;
     }
 
-    // Физика утки по кадрам — та же, что у игры: Duck.UpdateMove (кнопки) и
-    // PhysicsObject.UpdatePhysics (трение, гравитация). Сверена с самописцем:
-    // разгон 0.55 до 3.1, трение 0.25 каждый кадр и на земле, и в воздухе (у утки
-    // оно от опоры не зависит), гравитация 0.2 до перемещения, прыжок −4.9,
-    // отпускание кнопки в подъёме — половина скорости. Взмахи: новое нажатие в
-    // воздухе после окна койота, и пока кнопка зажата, утка падает не быстрее
-    // ~1 пикселя за кадр. Нажатие прыжка игра помнит 4 кадра, время койота — 7.
+    // Физика утки по кадрам, как Duck.UpdateMove и PhysicsObject.UpdatePhysics, сверена с
+    // самописцем. Трение 0.25 действует и в воздухе. Отпустил прыжок в подъёме — половина
+    // скорости. Взмах — новое нажатие в воздухе после окна койота, с ним падаешь не быстрее
+    // ~1 px за кадр. Нажатие прыжка игра помнит 4 кадра, койот — 7.
     public static class DuckPhysics
     {
         public const float Accel = 0.55f, RunMax = 3.1f, Friction = 0.25f, Gravity = 0.2f;
         public const float JumpSpeed = -4.9f, FallMax = 8.2f, HoverFall = 1f, HoverLift = 0.15f;
-        public const float HalfWidth = 4f, Height = 22f;   // бокс утки 8×22, низ на 15 ниже центра
+        public const float HalfWidth = 4f, Height = 22f;   // бокс 8×22, низ на 15 ниже центра
 
         // Кнопки и скорости одного кадра, без столкновений — их считает карта.
         public static void Controls(ref SimDuck d, int dir, bool jumpDown)
@@ -72,7 +60,7 @@ namespace DuckBots
                 }
             }
 
-            // PhysicsObject: трение к нулю, потом гравитация — до перемещения.
+            // Трение, потом гравитация — до перемещения.
             if (d.hs > -Friction && d.hs < Friction) d.hs = 0f;
             else d.hs -= d.hs > 0f ? Friction : -Friction;
             d.vs += Gravity;

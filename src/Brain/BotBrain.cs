@@ -1,12 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
-using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Text;
-using DuckGame;
-using HarmonyLib;
 
 namespace DuckBots
 {
@@ -15,55 +7,44 @@ namespace DuckBots
         public const int Chase = 0, Fight = 1, GetGun = 2, Flee = 3, Drop = 4, Unstuck = 5, Netted = 6, Carry = 7, Ragdoll = 8;
         public static readonly string[] modeNames = { "CHASE", "FIGHT", "GETGUN", "FLEE", "DROP", "UNSTUCK", "NETTED", "CARRY", "RAGDOLL" };
 
-        // Эти числа и есть настройка поведения, их крутят по ощущениям от игры.
-        public const float RangeX = 150f;      // дальше бот стрелять не пробует
-        public const float SameLevelY = 16f;   // на одной высоте: целятся-то горизонтально
-        public const float KeepDist = 20f;     // ближе не подходим, отходим назад
-        // Ракета и граната убивают уток в 30 пикселях от взрыва и сыплют осколки ещё
-        // на 20 (ATMissile.DestroyRadius): ближе этого взрывчаткой не стреляем.
-        public const float BlastSafe = 56f;
-        public const float MeleeReach = 22f;   // с мечом, наоборот, бить можно только отсюда
-        public const float BoxDist = 8f;       // стоим под ящиком — можно бить снизу
-        public const float ThrowRange = 70f;   // дальше граната не долетит
-        public const float DropBelow = 24f;    // цель настолько ниже — стоит проваливаться
-        public const float VertStep = 16f;     // цель настолько выше — пора прыгать, а не идти
-        public const int WanderFrames = 45;    // столько кадров держим выбранное направление
-        public const float DangerR = 75f;      // своя же брошенная граната улетает дальше сорока
-        public const float HoverReach = 90f;   // выше взмахами уже не достать
-        public const float HoverAimX = 16f;    // и только если враг почти над головой
+        public const float RangeX = 150f;      // дальность, когда своей у оружия нет
+        public const float SameLevelY = 16f;   // ствол бьёт только горизонтально
+        public const float KeepDist = 20f;
+        public const float BlastSafe = 56f;    // взрыв убивает в 30 px и сыплет осколки ещё на 20 (ATMissile.DestroyRadius)
+        public const float MeleeReach = 22f;
+        public const float BoxDist = 8f;
+        public const float ThrowRange = 70f;
+        public const float DropBelow = 24f;
+        public const float VertStep = 16f;
+        public const int WanderFrames = 45;
+        public const float DangerR = 75f;
+        public const float HoverReach = 90f;
+        public const float HoverAimX = 16f;
         public const int ShootHold = 3, ShootGap = 8;
         public const int GrabGap = 12;
-        // Высота прыжка задаётся длиной удержания: Released(Jump) режет скорость вдвое.
-        // Через яму нужен полный прыжок, на уступ хватает короткого.
-        // Три длительности удержания: ступенька, этаж, полный прыжок до вершины.
+        // Высота прыжка — длина удержания: Released(Jump) режет скорость вверх вдвое.
         public const int JumpTap = 4, JumpMid = 14, JumpFull = 28;
-        public const int JumpRest = 2;   // кадров отпущенной кнопки между прыжками
+        public const int JumpRest = 2;
         public const int StuckFrames = 12;
-        public const int StuckLimit = 240;     // сторож: четыре секунды на пятачке — залип
-        public const float BoxReach = 80f;     // ящик выше этого прыжком снизу не достать
-        public const float GrabR = 16f;        // зона подбора: в игре круг 18 вокруг точки на 4 ниже центра
-        public const float FarJump = 48f;      // дальше этого прыжок держим до упора при любом подъёме
-        public const float AlignTol = 2f;      // прыжок по программе — не дальше этого от центра клетки
-        // Стекло поперёк маршрута. Зазор меряется от бока утки до бока стекла.
-        public const float GlassReach = DuckPhysics.HalfWidth + 3f;   // полуширины утки и стекла
-        public const float RunUp = 32f;        // отход для разбега: к SlideGap утка уже на полной 2.85
+        public const int StuckLimit = 240;
+        public const float BoxReach = 80f;
+        public const float GrabR = 16f;        // игра берёт в круге 18 вокруг точки на 4 ниже центра (Duck.TryGrab)
+        public const float FarJump = 48f;      // дальше — до упора: дальность рёбер граф считает по полному прыжку
+        public const float AlignTol = 2f;
+        public const float GlassReach = DuckPhysics.HalfWidth + 3f;   // зазор меряется от бока утки до бока стекла
+        public const float RunUp = 32f;
         public const float SlideGap = 16f;     // отсюда подкат долетает до стекла
         public const float ShootMin = 16f;     // ближе ствол упирается в стекло и задирается вверх
-        public const float ShootFrom = 24f;    // до этого зазора отходим, чтобы стрелять
-        public const int BackFrames = 24;      // дольше не отходим: сзади стена
-        public const int ShootFrames = 40;     // столько стреляем, дальше — подкатом
-        public const int SmashTries = 3;       // столько неудач подряд, дальше — сторож
-        // Подкат от выстрела. DodgeDelay — ручка силы для этапа 3: через сколько кадров
-        // бот замечает, что в него целятся. Сильнейшему — сразу: бот-стрелок стреляет в
-        // первый же кадр с линией, и 27.09 пять ботов из шести погибли ещё в разгоне.
-        public const int DodgeDelay = 0;
-        public const int DodgeAfter = 12;      // столько ещё лежать, когда целиться перестали
-        public const int DodgeMax = 90;        // дольше не лежим: в лежачего тоже целятся
-        public const int DodgeRest = 30;       // столько после этого не ложиться
+        public const float ShootFrom = 24f;
+        public const int BackFrames = 24;
+        public const int ShootFrames = 40;
+        public const int SmashTries = 3;
+        public const int DodgeDelay = 0;       // ручка силы для этапа 3: через сколько кадров бот замечает прицел
+        public const int DodgeAfter = 12;
+        public const int DodgeMax = 90;        // в лежачего тоже попадают
+        public const int DodgeRest = 30;
 
-        // Почему бот делает то, что делает: одна строка на ветку Think (why)
-        // и одна на способ хода в MoveTo (how). Журнал печатает их при смене
-        // режима и в каждом кадре самописца, самопроверка сверяет с веткой.
+        // Причины решений: why — ветка Think, how — способ хода. Их печатает журнал и сверяет самопроверка.
         public const string WhyThrow = "бросаю взведённую";
         public const string WhyFlee = "бегу от взрывчатки";
         public const string WhyArm = "взвожу: враг вплотную";
@@ -118,22 +99,15 @@ namespace DuckBots
         public const string HowDodgeRun = "разгон для подката: в меня целятся";
         public const string HowDodge = "лежу в подкате: в меня целятся";
 
-        // Чистая функция: на входе числа, на выходе маска кнопок. Никаких игровых типов.
-        //
-        // Прыжок — действие на несколько кадров, а не решение одного кадра. Высота
-        // задаётся тем, как долго кнопку держат уже в воздухе, а в воздухе ни одно
-        // условие «пора прыгать» не выполняется: земли под ногами нет, обрывов не
-        // видно, застревания нет. Раньше бот поэтому отпускал кнопку на первом же
-        // кадре после отрыва, игра резала скорость вдвое, и любой прыжок выходил
-        // высотой в одну клетку. Теперь начатый прыжок держится здесь, поверх
-        // решения ветки, до конца.
+        // Чистая функция: на входе числа, на выходе маска кнопок. Начатый прыжок держится
+        // поверх решения ветки: высоту задаёт удержание уже в воздухе, где ни одно условие
+        // «пора прыгать» не выполняется.
         public static ushort Decide(ref BotView v, ref BotState s)
         {
             if (s.jumpRest > 0) s.jumpRest--;
             s.how = null;
-            // Подбросила пружина — начатая программа прыжка больше не про этот полёт: она
-            // кончается только приземлением, а пружина под блоком ловит бота раньше земли.
-            // Дальше рулит ребро полёта с пружины (его шаг Route считает прямо в воздухе).
+            // Программа прыжка кончается только приземлением, а пружина под блоком ловит раньше
+            // земли: подбросило — программу бросить, дальше рулит ребро полёта (Launch).
             if (v.kicked) { s.progAt = 0; s.jumpHold = 0; s.stuckFrames = 0; }
             ushort m = Think(ref v, ref s);
             m = Dodge(m, ref v, ref s);
@@ -142,8 +116,7 @@ namespace DuckBots
                 m |= BotInput.JUMP;
                 if (--s.jumpHold == 0) s.jumpRest = JumpRest;
             }
-            // Программа прыжка по ребру маршрута: пока идёт, она одна решает направление
-            // и прыжок — ровно так, как её прогнала карта. Сели — программа кончилась.
+            // Пока идёт программа прыжка ребра, направление и прыжок жмёт только она — как её прогнала карта.
             if (s.progAt > 0)
             {
                 int f = s.progAt - 1;
@@ -165,20 +138,14 @@ namespace DuckBots
             return m;
         }
 
-        // Подкат от выстрела, поверх решения ветки. Утка в подкате — 11 пикселей высотой
-        // против 22 стоя (анимация groundSlide), и пуля стоящего стрелка проходит над ней;
-        // пригнуться на месте мало: присед — 16. Подкат начинается только на бегу,
-        // |hs| > 1, а пригнувшись утка уже не разгоняется. Начатый подкат держится, пока
-        // зажат DOWN: утка лежит, даже остановившись. Отсюда программа: в бота целятся —
-        // разогнаться, если стоит, туда, куда он и так шёл, и нажать DOWN; лежать, пока
-        // целятся, и ещё DodgeAfter кадров после. Дольше DodgeMax не лежать: в лежачего
-        // попадает такой же лежачий, а бот без ствола пролежал бы весь раунд.
+        // Подкат от выстрела. В подкате утка 11 px высотой против 22 стоя (присед — 16), и пуля
+        // стоящего проходит над ней. Подкат начинается только на бегу (|hs| > 1), пригнувшись
+        // утка не разгоняется, а лежит, пока зажат DOWN.
         private static ushort Dodge(ushort m, ref BotView v, ref BotState s)
         {
             s.threatFrames = v.threatened ? s.threatFrames + 1 : 0;
             if (s.dodgeRest > 0) s.dodgeRest--;
             bool aimed = s.threatFrames > DodgeDelay;
-            // Только с земли; от взрывчатки бегут, а не ложатся.
             if (!v.grounded || s.mode == Flee || v.netted || v.ragdoll)
             {
                 EndDodge(ref s);
@@ -194,26 +161,20 @@ namespace DuckBots
             else if (--s.dodgeLeft <= 0) { EndDodge(ref s); return m; }
             if (s.dodgeFrames > DodgeMax) { EndDodge(ref s); s.dodgeRest = DodgeRest; return m; }
 
-            // Стоим: разгон туда, куда бот уже катится, — разворот съедает 5–6 кадров, и
-            // 28.09 боты гибли, тормозя перед подкатом; иначе туда, куда он и так шёл,
-            // иначе к стрелку — не прочь от цели.
+            // Разгон туда, куда уже катимся (разворот съедает 5–6 кадров), иначе куда шли, иначе к стрелку.
             bool down = v.sliding || Math.Abs(v.hs) > 1f;
             if (!down && s.dodgeDir == 0)
             {
                 int dir = v.hs > 0.3f ? 1 : v.hs < -0.3f ? -1
                     : (m & BotInput.RIGHT) != 0 ? 1 : (m & BotInput.LEFT) != 0 ? -1 : (v.threatDx > 0f ? 1 : -1);
                 if (Abyss(ref v, dir)) dir = -dir;
-                if (Abyss(ref v, dir)) { EndDodge(ref s); s.dodgeRest = DodgeRest; return m; }   // разгоняться некуда
+                if (Abyss(ref v, dir)) { EndDodge(ref s); s.dodgeRest = DodgeRest; return m; }
                 s.dodgeDir = dir;
             }
-            // Уклоняемся — не прыгаем: прыжок, начатый веткой в этом кадре, отменяется. И
-            // лежачий бот не застрял, он не двигается нарочно: иначе MoveTo через дюжину
-            // кадров командовал «упёрся: прыжок» и поднимал его под пулю.
+            // Лёжа не прыгать и не копить застревание: «упёрся: прыжок» поднял бы под пулю.
             s.jumpHold = 0;
             s.progAt = 0;
             s.stuckFrames = 0;
-            // Уже лежим или бежим достаточно быстро — DOWN. Направление оставляем ветке:
-            // пригнувшись, утка не разгоняется, но поворачивается к врагу, чтобы стрелять.
             if (down)
             {
                 s.how = HowDodge;
@@ -231,8 +192,7 @@ namespace DuckBots
             s.dodgeLeft = 0;
         }
 
-        // Начать программу прыжка: кнопка прыжка перед этим должна побыть отпущенной,
-        // иначе Pressed не поймает фронт.
+        // Pressed ловит фронт: перед новым прыжком кнопка должна побыть отпущенной.
         private static void StartProgram(ref BotState s, int prog, float dx, float dy)
         {
             if (s.jumpHold > 0 || s.jumpRest > 0 || s.progAt > 0) return;
@@ -243,8 +203,8 @@ namespace DuckBots
             s.jumpDY = dy;
         }
 
-        // Встать в центр клетки и остановиться: желаемая скорость — по расстоянию до
-        // центра; жмём к ней, трение (0.25) и встречное нажатие (ещё 0.55) гасят лишнее.
+        // Встать в центр клетки: желаемая скорость — по расстоянию, трение (0.25) и встречное
+        // нажатие (ещё 0.55) гасят лишнее.
         private static ushort Align(float cx, float hs)
         {
             float want = cx * 0.3f;
@@ -255,10 +215,6 @@ namespace DuckBots
             return 0;
         }
 
-        // Начать прыжок можно только с земли, не посреди другого прыжка и после
-        // хотя бы кадра с отпущенной кнопкой: Pressed ловит фронт, зажатая кнопка
-        // второй раз не сработает. Кто начал прыжок и куда целился, запоминается:
-        // журнал промахов считает только прыжки, начатые ребром маршрута.
         private static void StartJump(ref BotState s, int hold, bool grounded, string by, float dx, float dy)
         {
             if (!grounded || s.jumpHold > 0 || s.jumpRest > 0) return;
@@ -268,9 +224,6 @@ namespace DuckBots
             s.jumpDY = dy;
         }
 
-        // Подбор в игре — круг радиусом 18 вокруг точки на 4 пикселя ниже центра утки
-        // (Duck.TryGrab). Ствол на полу под ногами лежит на 12 пикселей ниже центра,
-        // и прежняя проверка «ближе 12 по обеим осям» его отсекала: боты стояли на нём.
         private static bool InGrabReach(float px, float py)
         {
             float dy = py - 4f;
@@ -282,11 +235,7 @@ namespace DuckBots
             return dir > 0 ? v.abyssRight : dir < 0 && v.abyssLeft;
         }
 
-        // Сторож залипания, чистая часть: бот идёт к цели, а с места не сдвинулся —
-        // считаем кадры, и на StuckLimit пора уходить в сторону. Обездвиженная утка
-        // не застряла: это заставка раунда или утрамбовка мушкета. В логе 24.09
-        // 145 срабатываний из 170 были заставкой — все боты разом через 4 с после
-        // старта, а уход в сторону без маршрута уводил их в пропасть.
+        // Обездвиженная утка (заставка раунда, утрамбовка мушкета) не застряла.
         public static bool Watchdog(ref int frames, bool going, bool moved, bool frozen)
         {
             if (!going || moved || frozen) { frames = 0; return false; }
@@ -297,11 +246,8 @@ namespace DuckBots
 
         private static ushort Think(ref BotView v, ref BotState s)
         {
-            // 0. Бот в рэгдолле. Сама утка не встаёт никогда: игра поднимает её по новому
-            // нажатию JUMP, когда тело касается земли (Ragdoll.UpdateInput). Раньше боты
-            // лежали, пока через 4 с прыжок не жал сторож, а мозг тем временем шёл к врагу
-            // от объекта утки, унесённого на 5000 пикселей вверх. Поэтому ветка первая и
-            // на остальной обзор не смотрит. Жать импульсами — Pressed ловит фронт.
+            // Из рэгдолла игра поднимает утку по новому нажатию JUMP, когда тело на земле
+            // (Ragdoll.UpdateInput). Координаты утки при этом на 5000 выше — остальной обзор врёт.
             if (v.ragdoll)
             {
                 s.mode = Ragdoll;
@@ -311,10 +257,7 @@ namespace DuckBots
                 return Pulse(ref s.jumpTimer, 1, 1) ? BotInput.JUMP : (ushort)0;
             }
 
-            // Бот в сетке. Пойманная утка — предмет, который враг может поднять и
-            // сбросить в пропасть; вырывается она прыжками: каждое нажатие срезает время
-            // сетки, на земле вчетверо сильнее. Жать импульсами — Pressed ловит фронт,
-            // поэтому начатый прыжок сбрасывается, иначе он слился бы в одно нажатие.
+            // Каждое нажатие прыжка срезает время сетки.
             if (v.netted)
             {
                 s.mode = Netted;
@@ -324,8 +267,7 @@ namespace DuckBots
                 return Pulse(ref s.jumpTimer, 1, 1) ? BotInput.JUMP : (ushort)0;
             }
 
-            // 1. Чека выдернута — это уже не оружие в руках, а таймер. Бросать немедленно,
-            // развернувшись к врагу: GRAB кидает туда, куда смотрит утка.
+            // GRAB бросает туда, куда смотрит утка.
             if (v.armedInHand)
             {
                 s.mode = Fight;
@@ -338,7 +280,6 @@ namespace DuckBots
                 return Pulse(ref s.grabTimer, 1, GrabGap) ? BotInput.GRAB : (ushort)0;
             }
 
-            // 2. Убежать от чужой взрывчатки.
             if (v.danger)
             {
                 s.mode = Flee;
@@ -346,7 +287,6 @@ namespace DuckBots
                 return MoveTo(v.dx > 0f ? -100f : 100f, 0f, NavMap.Walk, false, 0, ref v, ref s);
             }
 
-            // 3. Граната или мина в руках: взвести можно только вплотную, иначе не долетит.
             if (v.explosiveInHand)
             {
                 if (v.hasEnemy && v.canShoot && Math.Abs(v.ex) < ThrowRange)
@@ -355,7 +295,6 @@ namespace DuckBots
                     s.why = WhyArm;
                     bool toRight = v.ex > 0f;
                     if (toRight != v.facingRight) return toRight ? BotInput.RIGHT : BotInput.LEFT;
-                    // Взвели — на следующем кадре сработает ветка 1 и бросит.
                     return Pulse(ref s.shootTimer, 1, ShootGap) ? BotInput.SHOOT : (ushort)0;
                 }
                 s.mode = Chase;
@@ -364,11 +303,9 @@ namespace DuckBots
                 return GoToEnemy(ref v, ref s);
             }
 
-            // 3.5. Несём пойманного врага — к пропасти и бросить туда: упавший за край
-            // в сетке гибнет (DTFall), и убийство засчитывается поймавшему. Бросок летит
-            // туда, куда смотрит утка, а с зажатым направлением он в 2.5 раза сильнее
-            // (Duck.ThrowItem). На краю — развернуться лицом к пропасти и бросить,
-            // держа направление ровно в кадр броска: иначе утка шагнёт с края сама.
+            // Упавший за край в сетке гибнет, убийство засчитывается поймавшему. Бросок с зажатым
+            // направлением в 2.5 раза сильнее (Duck.ThrowItem), но жать его можно только в кадр
+            // броска, иначе утка шагнёт с края сама.
             if (v.carrying)
             {
                 s.mode = Carry;
@@ -386,17 +323,12 @@ namespace DuckBots
                 return 0;
             }
 
-            // 4. Враг прямо над головой. Горизонтально его не достать — угол прицела
-            // в игре не выбирается, — но в воздухе с зажатым прыжком утка машет
-            // крыльями, и на взмахах ствол поднимается вверх сам. Этим и стреляем.
-            // Огнемётом вверх не стреляют: огонь падает обратно на стрелка.
+            // Угол прицела в игре не выбирается, но на взмахах ствол сам смотрит вверх. Взмах — новое
+            // нажатие прыжка в воздухе: подпрыгнуть, отпустить, зажать снова. Огонь огнемёта падает на стрелка.
             if (v.holding == 1 && v.canShootUp && !(v.blastInHand && -v.ey < BlastSafe) && !v.holdFire)
             {
                 s.mode = Fight;
                 s.why = WhyShootUp;
-                // Взмахи — это новое нажатие прыжка в воздухе: подпрыгнуть коротко,
-                // отпустить и зажать снова. Зажатый с земли прыжок взмахов не даёт —
-                // утка просто прыгает, и ствол смотрит вбок; так бот и делал раньше.
                 ushort up = 0;
                 if (v.grounded) StartJump(ref s, 3, true, WhyShootUp, 0f, 0f);
                 else if (s.jumpHold == 0 && s.jumpRest == 0) up |= BotInput.JUMP;
@@ -404,20 +336,17 @@ namespace DuckBots
                 return up;
             }
 
-            // 5. Драться: есть чем и есть линия огня.
             if (v.holding == 1 && v.canShoot)
             {
                 s.mode = Fight;
                 bool targetRight = v.ex > 0f;
-                // Ствол смотрит по offDir, поднять его в игре нечем — значит сначала разворот.
                 if (targetRight != v.facingRight)
                 {
                     s.why = WhyTurn;
                     return targetRight ? BotInput.RIGHT : BotInput.LEFT;
                 }
 
-                // Меч, пила, кувалда — технически Gun с патронами, но бьют вплотную.
-                // Издалека бот раньше просто махал в воздух: линия огня-то есть.
+                // Холодное для игры — Gun с патронами, но бьёт только вплотную.
                 if (v.meleeInHand)
                 {
                     if (Math.Abs(v.ex) > MeleeReach)
@@ -429,10 +358,7 @@ namespace DuckBots
                     return Pulse(ref s.shootTimer, ShootHold, ShootGap) ? BotInput.SHOOT : (ushort)0;
                 }
 
-                // Базука, гранатомёт, ракетница рвутся там, куда попали, и ближе BlastSafe
-                // взрыв достаёт самого стрелка: вплотную не стрелять, а отходить. STRAFE
-                // держит утку лицом к врагу, чтобы выстрелить сразу, как отошла. За спиной
-                // пропасть — стоять.
+                // STRAFE держит утку лицом к врагу: без него шаг назад разворачивает её спиной.
                 if (v.blastInHand && Math.Abs(v.ex) < BlastSafe)
                 {
                     s.why = WhyBlastBack;
@@ -440,8 +366,6 @@ namespace DuckBots
                     return (ushort)(BotInput.STRAFE | (targetRight ? BotInput.LEFT : BotInput.RIGHT));
                 }
 
-                // Сквозь стекло вплотную не стрелять: ствол упирается в него и задирается
-                // вверх (ShootMin, как у удара по стеклу). Отойти лицом к врагу.
                 if (v.glassLine && v.hasGlass && (v.glassDx > 0f) == targetRight
                     && Math.Abs(v.glassDx) - GlassReach < ShootMin && !Abyss(ref v, targetRight ? -1 : 1))
                 {
@@ -451,19 +375,12 @@ namespace DuckBots
 
                 ushort m = 0;
                 s.why = WhyShoot;
-                // Отступать можно, только если за спиной не пропасть. STRAFE держит утку
-                // лицом к врагу: без него шаг назад разворачивал её спиной, следующий кадр —
-                // обратно, и бот не отходил и не стрелял (в журналах 22.10 так 60–75% кадров
-                // отступления).
                 if (Math.Abs(v.ex) < KeepDist && !Abyss(ref v, targetRight ? -1 : 1))
                 {
                     m |= (ushort)(BotInput.STRAFE | (targetRight ? BotInput.LEFT : BotInput.RIGHT));
                     s.why = WhyBackOff;
                 }
-                // Гранатомёт стреляет на отпускании SHOOT, а пока его держат, ствол
-                // поднимается (GrenadeLauncher.Update): нажать, держать до угла дуги до
-                // врага и отпустить. После выстрела ствол остывает и нажатия не слышит, а
-                // нажатие ловится по фронту — поэтому до подъёма ствола жать импульсами.
+                // Нажатие ловится по фронту, а остывающий ствол его не слышит: до подъёма ствола — импульсы.
                 if (v.lobber)
                 {
                     s.why = WhyLob;
@@ -472,14 +389,11 @@ namespace DuckBots
                     return v.lobAim >= v.lobAngle ? m : (ushort)(m | BotInput.SHOOT);
                 }
 
-                // Огнемёт выбрасывает огонь, только пока SHOOT зажат, и начинает с 5-го
-                // кадра (FlameThrower.Update): импульсы по ShootHold его не зажигали.
                 if (v.holdFire || Pulse(ref s.shootTimer, ShootHold, ShootGap)) m |= BotInput.SHOOT;
                 return m;
             }
 
-            // 5.5. Враг в сетке лежит — поднять его и нести к пропасти. Руки должны быть
-            // свободны: GRAB с чем-то в руках бросает это, а не поднимает.
+            // GRAB с чем-то в руках бросает это, а не поднимает.
             if (v.hasPickup && v.pickupIsTrap)
             {
                 s.mode = Carry;
@@ -494,8 +408,7 @@ namespace DuckBots
                 return take;
             }
 
-            // 5.6. В руках сеткомёт, а достижим смертельный ствол — сеткомёт бросить,
-            // дальше сработает обычный подбор. Другой цели подбора у сеткомёта нет.
+            // С сеткомётом целью бывает только пойманный или смертельный ствол.
             if (v.netGun && v.hasPickup)
             {
                 s.mode = Drop;
@@ -503,22 +416,16 @@ namespace DuckBots
                 return Pulse(ref s.grabTimer, 1, GrabGap) ? BotInput.GRAB : (ushort)0;
             }
 
-            // Сторож заметил, что бот топчется на пятачке, идя к цели: маршрут ведёт
-            // туда, куда на деле не попасть, и бот повторяет одно и то же движение.
-            // Уйти в сторону — разворотом, от того, во что упирался. Цель при этом
-            // забыта снаружи, и после выхода маршрут будет другим.
             if (v.breakout)
             {
                 s.mode = Unstuck;
                 s.why = WhyBreakout;
                 if (s.breakDir == 0) s.breakDir = v.facingRight ? -1 : 1;
-                // Уходя в сторону, к пропасти не идти — развернуться от края.
                 if (Abyss(ref v, s.breakDir)) s.breakDir = -s.breakDir;
                 return MoveTo(s.breakDir * 100f, 0f, NavMap.Walk, false, 0, ref v, ref s);
             }
             s.breakDir = 0;
 
-            // 6. Подарок в руках не выбрасывают, а открывают: SHOOT, внутри случайный предмет.
             if (v.presentInHand)
             {
                 s.mode = GetGun;
@@ -526,7 +433,6 @@ namespace DuckBots
                 return Pulse(ref s.shootTimer, 1, ShootGap) ? BotInput.SHOOT : (ushort)0;
             }
 
-            // 7. Руки заняты не тем: GRAB при занятых руках выбрасывает предмет.
             if (v.holding == 2 || v.holding == 3)
             {
                 s.mode = Drop;
@@ -534,7 +440,6 @@ namespace DuckBots
                 return Pulse(ref s.grabTimer, 1, GrabGap) ? BotInput.GRAB : (ushort)0;
             }
 
-            // 8. Взять оружие: ствол с земли, а если свободных стволов нет — вскрыть ящик.
             if (v.holding != 1 && v.hasPickup)
             {
                 s.mode = GetGun;
@@ -542,9 +447,6 @@ namespace DuckBots
                 ushort m = GoToPickup(ref v, ref s);
                 if (v.pickupIsBox)
                 {
-                    // Ящик вскрывается ударом снизу — ровно как в ванильном AIStateFindGun.
-                    // Только если он над головой и прыжок до него достаёт: раньше бот,
-                    // стоя на крыше ящика, прыгал на месте до срабатывания сторожа.
                     if (Math.Abs(v.px) < BoxDist && v.py < -VertStep && v.py > -BoxReach)
                     {
                         s.why = WhyHitBox;
@@ -559,21 +461,14 @@ namespace DuckBots
                 return m;
             }
 
-            // 9. Иначе сближаться.
             s.mode = Chase;
             if (!v.hasEnemy) { s.why = WhyNoEnemy; return 0; }
-            // Утки стоят друг на друге: враг почти ровно сверху или снизу, ближе
-            // полутора клеток. Выстрела тут нет ни вбок, ни вверх, маршрута тоже нет —
-            // это одна клетка. Разойтись в сторону, дальше сработает бой.
+            // Утки друг на друге: выстрела нет, маршрута тоже (одна клетка) — разойтись.
             if (Math.Abs(v.ex) < HoverAimX && Math.Abs(v.ey) < DropBelow)
             {
                 s.why = WhyStack;
                 return Sidestep(ref v, ref s);
             }
-            // Со стволом бот идёт не к врагу, а на позицию для выстрела: та же высота,
-            // дистанция, чистая линия (NavMap.FiringNode). Дошёл, а линии пока нет —
-            // развернуться к врагу и ждать, а не лезть к нему: раньше все шли в точку
-            // врага и сходились там, где стрелять уже поздно.
             if (v.holding == 1 && v.atSpot)
             {
                 s.why = WhyAim;
@@ -586,8 +481,6 @@ namespace DuckBots
             return GoToEnemy(ref v, ref s);
         }
 
-        // Шаг в сторону пачкой кадров: направление держится, пока не истечёт,
-        // иначе бот дрожит на месте и никуда не уходит.
         private static ushort Sidestep(ref BotView v, ref BotState s)
         {
             if (s.wanderFrames <= 0)
@@ -596,39 +489,30 @@ namespace DuckBots
                 s.wanderDir = s.wanderDir == 0 ? (v.facingRight ? 1 : -1) : -s.wanderDir;
             }
             s.wanderFrames--;
-            // Расходясь, в пропасть не шагать: разворот, а если она с обеих сторон — стоять.
             if (Abyss(ref v, s.wanderDir)) s.wanderDir = -s.wanderDir;
             if (Abyss(ref v, s.wanderDir)) { s.how = HowAbyss; return 0; }
             s.how = HowSidestep;
             return s.wanderDir > 0 ? BotInput.RIGHT : BotInput.LEFT;
         }
 
-        // Стекло поперёк маршрута. Шагом его не разбить: пуля бьёт стекло всегда, а
-        // телом — только подкат с разгона (человек 25.09 разбил так восемь стёкол на
-        // скорости 2.2–3.0). Это программа на несколько кадров, как прыжок: отойти,
-        // потом выстрелить или разогнаться и подкатиться. Держится она на целом
-        // стекле, а не на шаге «стекло»: маршрут пересчитывается раз в десять кадров
-        // от той клетки, куда бот отошёл, и шаг сам меняется на «к стеклу».
+        // Стекло бьёт пуля или подкат с разгона, шагом его не разбить. Программа держится на целом
+        // стекле, а не на шаге «стекло»: маршрут пересчитывается от клетки, куда бот отошёл.
         private static bool Smash(float dx, int edge, bool routed, ref BotView v, ref BotState s, out ushort m)
         {
             m = 0;
             int dir = dx > 1f ? 1 : (dx < -1f ? -1 : 0);
-            // Начатая программа держит своё направление. На разбеге шаг маршрута ведёт
-            // к центру следующей клетки, и бот то встаёт в него (dx = 0), то проскакивает:
-            // 22.10 (springs, f28222) программа на этом обрывалась за пару кадров до
-            // подката, и за восемь матчей боты разбили одно стекло.
+            // На разбеге шаг ведёт к центру следующей клетки, и dx бывает нулём: держать своё направление.
             if (s.smashDir != 0) dir = s.smashDir;
             bool ahead = routed && dir != 0 && v.hasGlass && (v.glassDx > 0f) == (dir > 0);
             if (!ahead)
             {
-                // Разбито или маршрут повернул: программа кончилась.
                 s.smashDir = 0; s.smashRun = false; s.smashFrames = 0; s.smashTries = 0;
                 return false;
             }
-            if (s.smashTries >= SmashTries) return false;        // не выходит — дальше сторож
+            if (s.smashTries >= SmashTries) return false;
             if (s.smashDir != dir)
             {
-                if (edge != NavMap.Smash) return false;          // начинает только шаг «стекло»
+                if (edge != NavMap.Smash) return false;
                 s.smashDir = dir; s.smashRun = false; s.smashFrames = 0;
             }
             s.smashFrames++;
@@ -636,8 +520,8 @@ namespace DuckBots
             float gap = Math.Abs(v.glassDx) - GlassReach;
             ushort toward = dir > 0 ? BotInput.RIGHT : BotInput.LEFT;
             ushort away = dir > 0 ? BotInput.LEFT : BotInput.RIGHT;
-            bool room = dir > 0 ? !v.gapLeft : !v.gapRight;     // сзади есть куда отойти
-            bool shoot = v.glassGun && s.smashTries == 0;        // первая попытка — пулей
+            bool room = dir > 0 ? !v.gapLeft : !v.gapRight;
+            bool shoot = v.glassGun && s.smashTries == 0;
             if (!s.smashRun)
             {
                 if (gap < (shoot ? ShootFrom : RunUp) && room && s.smashFrames < BackFrames)
@@ -651,8 +535,6 @@ namespace DuckBots
             }
             if (shoot)
             {
-                // Вплотную ствол задирается вверх, а не вышло за ShootFrames — пуля не
-                // берёт или кончилась: дальше подкатом.
                 if (gap < ShootMin || s.smashFrames > ShootFrames)
                 {
                     s.smashTries++; s.smashRun = false; s.smashFrames = 0;
@@ -668,20 +550,16 @@ namespace DuckBots
             float speed = v.hs * dir;
             if (s.smashFrames > 20 && gap < SlideGap && speed < 0.5f)
             {
-                // Подкатился, а стекло цело: ещё раз с разбега.
                 s.smashTries++; s.smashRun = false; s.smashFrames = 0;
                 return true;
             }
-            // Порог 1 — порог подката в самой игре: начавшись на полной скорости, подкат
-            // гаснет медленно, и выше порог отпускал бы DOWN посреди него.
+            // Порог 1 — порог подката в самой игре: выше он отпускал бы DOWN посреди подката.
             m = toward;
             if (gap <= SlideGap && speed > 1f) m |= BotInput.DOWN;
             return true;
         }
 
-        // Идти к цели. Когда есть маршрут, он прямо говорит, что делать на этом шаге:
-        // пройти, прыгнуть или провалиться сквозь платформу. Когда маршрута нет
-        // (граф не построен или цель недостижима), работают прежние догадки —
+        // Есть маршрут — шаг говорит, что делать: пройти, прыгнуть, провалиться. Нет — догадки:
         // прыжок при застревании и блуждание вдоль платформы.
         private static ushort MoveTo(float dx, float dy, int edge, bool routed, int prog,
                                      ref BotView v, ref BotState s)
@@ -692,11 +570,7 @@ namespace DuckBots
             bool wantUp = dy < -VertStep;
             bool wantDown = dy > DropBelow;
 
-            // Прыжок по программе: встать в центр клетки, погасить скорость и проиграть
-            // программу дословно — так, как её прогнала карта. Раньше бот прыгал с ходу
-            // и откуда придётся, а удержание выбирал по высоте: на space12_8 он
-            // оторвался, ещё разворачиваясь (hs −1.0), держал 14 кадров вместо 28
-            // и не долетел до края блока.
+            // Программу прыжка проигрывают из центра клетки и с места — так её прогнала карта.
             if (routed && edge == NavMap.Jump && prog != 0 && v.grounded && s.progAt == 0)
             {
                 s.stuckFrames = 0;
@@ -710,9 +584,7 @@ namespace DuckBots
                 return 0;
             }
 
-            // Провалиться сквозь одностороннюю платформу: игра роняет только если
-            // нажать JUMP в воздухе, не отпуская DOWN. Без маршрута — только если
-            // под платформой есть на что упасть: иначе это шаг в пропасть.
+            // Сквозь платформу игра роняет по JUMP в воздухе при зажатом DOWN.
             bool dropHere = routed
                 ? edge == NavMap.Drop
                 : wantDown && v.platformBelow && !v.abyssBelow;
@@ -729,14 +601,10 @@ namespace DuckBots
 
             int dir = dx > 1f ? 1 : (dx < -1f ? -1 : 0);
             bool jumpEdge = routed && edge == NavMap.Jump && v.grounded;
-            // Полёт пружиной: дойти до неё ногами и не прыгать — дальше сработает она.
             if (routed && edge == NavMap.Launch) jumpEdge = false;
 
-            // Шаг маршрута ровно под ногами, а мы стоим: под нами то, чего карта не видит, —
-            // выступ Nubber или край тайла. Карта считает, что тут пусто и бот вот-вот
-            // упадёт к узлу внизу. 20.10 на forest04_8 бот так простоял на выступе 30 с.
-            // Сойти с этой опоры туда, где под ногами обрыв; нет такой стороны или там
-            // пропасть — пачками кадров в обе стороны, но в пропасть не шагать.
+            // Шаг ровно под ногами, а мы стоим: опора, которой нет на карте (Nubber, край тайла).
+            // Сойти туда, где обрыв, но не в пропасть.
             if (routed && dir == 0 && wantDown && v.grounded && !jumpEdge)
             {
                 int side = v.gapLeft == v.gapRight ? 0 : (v.gapRight ? 1 : -1);
@@ -757,9 +625,6 @@ namespace DuckBots
                 return side > 0 ? BotInput.RIGHT : BotInput.LEFT;
             }
 
-            // Маршрута нет, по горизонтали пришли, а по вертикали нет: ходим вдоль
-            // платформы пачками кадров и ищем подъём. Стоять столбом нельзя — ровно
-            // на этом бот и залипал по двадцать пять секунд.
             if (!routed && dir == 0 && (wantUp || wantDown))
             {
                 if (s.wanderFrames <= 0)
@@ -773,9 +638,6 @@ namespace DuckBots
             else s.wanderFrames = 0;
             if (s.wanderFrames > 0) s.wanderFrames--;
 
-            // Без маршрута к пропасти не ходить: там, где под обрывом до низа карты
-            // нет ни пола, ни платформы, шаг — это смерть. Бродя — развернуться,
-            // иначе стоять у края. Маршрут знает, куда прыгает, догадка — нет.
             if (!routed && Abyss(ref v, dir))
             {
                 if (s.how == HowWander) { s.wanderDir = -s.wanderDir; dir = s.wanderDir; }
@@ -805,10 +667,7 @@ namespace DuckBots
             if (v.grounded && v.speedAbs < 0.2f) s.stuckFrames++;
             else s.stuckFrames = 0;
 
-            // Когда спускаемся, обрыв впереди — это дорога, а не препятствие.
-            // Прыгать через обрыв наугад можно только без маршрута: с маршрутом
-            // кнопки задаёт ребро, и ребро «шаг» с края значит сойти вниз, а не
-            // перелететь цель полным прыжком.
+            // Обрыв на спуске — дорога. С маршрутом кнопки задаёт ребро: «шаг» с края — сойти вниз.
             bool gap = (dir > 0 ? v.gapRight : v.gapLeft) && !wantDown;
             bool stuck = s.stuckFrames > StuckFrames;
             bool guessJump = !routed && wantUp && v.grounded;
@@ -822,27 +681,18 @@ namespace DuckBots
             return m;
         }
 
-        // Высота прыжка — это ровно длина удержания кнопки: Released(Jump) домножает
-        // оставшуюся скорость вверх на 0.5. При JumpSpeed = -4.9 и gravity = 0.2
-        // вершина на 24.5 кадрах, то есть «держать до упора» — это 28 кадров, а не 14,
-        // как было раньше: на четырнадцатом утка набирает 52 пикселя вместо шестидесяти
-        // и до третьего этажа не дотягивает.
+        // При JumpSpeed −4.9 и gravity 0.2 вершина на 24.5 кадре: «до упора» — 28 кадров.
         private static int JumpHold(float dx, float dy, bool overGap)
         {
-            if (overGap) return JumpFull;        // через яму важна дальность, а её даёт время в воздухе
-            // Далёкий прыжок — тоже до упора, при любом подъёме: дальность рёбер граф
-            // считает по полному прыжку, а средний летит короче. На space12_8 так
-            // четыре бота подряд не долетели до края блока и сползли в пропасть.
+            if (overGap) return JumpFull;
             if (Math.Abs(dx) > FarJump) return JumpFull;
             float rise = -dy;
-            if (rise > 40f) return JumpFull;     // три клетки
-            if (rise > 24f) return JumpMid;      // две
-            if (rise > 6f) return JumpTap;       // ступенька
-            return JumpFull;                     // ровно или вниз: значит летим далеко
+            if (rise > 40f) return JumpFull;
+            if (rise > 24f) return JumpMid;
+            if (rise > 6f) return JumpTap;
+            return JumpFull;
         }
 
-        // Маршрут знает дорогу вокруг ям и через этажи, прямое направление — нет.
-        // Поэтому идём по маршруту, когда он есть, и только иначе ломимся напрямик.
         private static ushort GoToEnemy(ref BotView v, ref BotState s)
         {
             if (v.hasEnemyStep)
@@ -857,8 +707,7 @@ namespace DuckBots
             return MoveTo(v.px, v.py, NavMap.Walk, false, 0, ref v, ref s);
         }
 
-        // Кнопку нельзя держать: Pressed ловит фронт, а после выстрела игра взводит
-        // _resetAction, пока SHOOT не отпустят. Поэтому всё нажимается импульсами.
+        // Кнопку не держат: Pressed ловит фронт, а после выстрела игра взводит _resetAction, пока SHOOT не отпустят.
         private static bool Pulse(ref int timer, int hold, int gap)
         {
             bool on = timer < hold;

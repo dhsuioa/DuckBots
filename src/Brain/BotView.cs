@@ -1,103 +1,86 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
-using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Text;
-using DuckGame;
-using HarmonyLib;
-
-namespace DuckBots
+﻿namespace DuckBots
 {
-    // Обстановка вокруг бота одним снимком. Только числа и флаги, никаких игровых
-    // типов: поэтому Decide можно прогнать на выдуманных ситуациях, не запуская игру.
+    // Обстановка вокруг бота одним снимком: только числа и флаги, без игровых типов, поэтому
+    // Decide проверяется без игры. Координаты — относительно центра утки.
     public struct BotView
     {
         public bool hasEnemy;
-        public float ex, ey;        // враг относительно бота
-        public bool canShoot;       // линия огня чиста и по высоте совпали
-        public bool glassLine;      // линия идёт сквозь целое стекло: пуля его разобьёт
+        public float ex, ey;
+        public bool canShoot;
+        public bool glassLine;      // линия огня идёт сквозь целое стекло
         public bool canShootUp;     // враг над головой: достать можно только взмахами
         public int holding;         // 0 пусто, 1 годное оружие, 2 негодное, 3 не оружие
-        public bool explosiveInHand;// граната или мина: их не держат, их бросают
-        public bool armedInHand;    // чека уже выдернута — бросать немедленно
-        public bool presentInHand;  // подарок: его открывают, а не выбрасывают
-        public bool meleeInHand;    // меч, пила, кувалда: бьют вплотную, а не издалека
-        public bool blastInHand;    // базука, гранатомёт, ракетница: взрыв достаёт стрелка вблизи
+        public bool explosiveInHand;
+        public bool armedInHand;    // чека выдернута
+        public bool presentInHand;
+        public bool meleeInHand;
+        public bool blastInHand;    // взрыв достаёт стрелка вблизи
         public bool holdFire;       // огнемёт: огонь идёт, только пока SHOOT зажат
-        // Гранатомёт: выстрел на отпускании SHOOT, а пока его держат, ствол поднимается.
-        public bool lobber;         // в руках гранатомёт
-        public int lobAngle;        // угол ствола для дуги до врага (BotBrain.LobAngle), −1 — дуги нет
+        public bool lobber;         // гранатомёт: выстрел на отпускании, пока держат — ствол поднимается
+        public int lobAngle;        // угол ствола для дуги до врага, −1 — дуги нет
         public float lobAim;        // нынешний угол ствола
-        public bool lobAiming;      // ствол поднимается: SHOOT нажат и держится
-        public bool lobCooling;     // после выстрела ствол остывает и нажатий не слышит
-        public bool breakout;       // сторож: бот топчется на месте — уйти в сторону
-        public bool netted;         // бот сам в сетке: вырываться прыжками
-        public bool ragdoll;        // бот в рэгдолле: тело в Ragdoll, координаты утки — на 5000 выше
-        public bool atSpot;         // стоит на позиции для выстрела: ждать линию, а не лезть к врагу
-        // Сеткомёт: поймать врага сеткой, поднять и бросить в пропасть.
-        public bool netGun;         // в руках сеткомёт, и на карте есть куда бросать
+        public bool lobAiming;
+        public bool lobCooling;     // после выстрела ствол нажатий не слышит
+        public bool breakout;       // сторож: уйти в сторону
+        public bool netted;
+        public bool ragdoll;        // координаты утки в рэгдолле — на 5000 выше тела
+        public bool atSpot;         // на позиции для выстрела
+        public bool netGun;         // сеткомёт, и на карте есть пропасть
         public bool pickupIsTrap;   // цель подбора — враг в сетке
-        public bool carrying;       // несём пойманного врага
-        public bool atThrowSpot;    // стоим на краю пропасти, откуда бросать
-        public int throwDir;        // с какой стороны пропасть
+        public bool carrying;       // несём пойманного
+        public bool atThrowSpot;
+        public int throwDir;
         public bool hasThrowStep;
         public float throwStepX, throwStepY;
         public int throwStepEdge, throwStepProg;
         public bool hasPickup;
-        public float px, py;        // ближайший свободный ствол или ящик
+        public float px, py;
         public bool pickupIsBox;
         public bool danger;
-        public float dx;            // взведённая взрывчатка рядом, знак = с какой стороны
+        public float dx;            // где взведённая взрывчатка
         public bool facingRight;
         public bool grounded;
-        public float speedAbs;      // |hSpeed|, по нему видно, что упёрлись
-        public bool gapLeft;        // слева под ногами нет опоры на расстоянии шага
+        public float speedAbs;
+        public bool gapLeft;        // под шагом нет опоры
         public bool gapRight;
-        public bool abyssLeft;      // а под обрывом до низа карты ни пола, ни платформы
+        public bool abyssLeft;      // и под обрывом до низа карты ничего
         public bool abyssRight;
-        public bool platformBelow;  // стоим на односторонней платформе, сквозь неё можно вниз
-        public bool abyssBelow;     // а под ней пропасть: проваливаться некуда
-        // Следующий шаг маршрута: куда идти и что там делать (NavMap.Walk/Jump/Drop).
+        public bool platformBelow;  // под ногами односторонняя платформа
+        public bool abyssBelow;
+        // Шаг маршрута: куда идти и каким ребром (NavMap.Walk/Jump/Drop/Launch/Smash).
         public bool hasEnemyStep, hasPickupStep;
         public float enemyStepX, enemyStepY, pickupStepX, pickupStepY;
         public int enemyStepEdge, pickupStepEdge;
-        public int enemyStepProg, pickupStepProg;   // программа прыжка, если шаг — прыжок
-        public float hs;            // скорость по x со знаком
-        public bool kicked;         // в этом кадре бота подбросило (пружина): шаг маршрута — уже из полёта
-        public float alignDx;       // сколько до центра своей клетки: прыжок по программе — оттуда
-        // Ближайшее целое вертикальное стекло на высоте утки, от центра до центра:
-        // у зазора ноль знак стороны теряется. Маршрут ведёт сквозь стекло ребром Smash.
-        public bool hasGlass;
+        public int enemyStepProg, pickupStepProg;
+        public float hs;
+        public bool kicked;         // в этом кадре подбросила пружина
+        public float alignDx;       // до центра клетки, откуда прыжок по программе
+        public bool hasGlass;       // ближайшее целое вертикальное стекло на высоте утки
         public float glassDx;
-        public bool glassGun;       // в руках ствол, которым стекло можно разбить вблизи
-        // Враг целится в бота: ствол, смотрит на него, та же высота, чистая линия.
-        public bool threatened;
-        public float threatDx;      // где стрелок, относительно бота
-        public bool sliding;        // утка в подкате: лежит, пока зажат DOWN
+        public bool glassGun;       // ствол, которым стекло бьют вблизи
+        public bool threatened;     // враг целится в бота
+        public float threatDx;
+        public bool sliding;
     }
 
-    // Обстановка в комнате лобби: выйти в портал вслед за человеком. Координаты — от
-    // центра утки, как в BotView.
     public struct LobbyView
     {
-        public bool humanReady;     // человек в портале: пора и нам
-        public bool inBeam;         // утка в портале (Duck.beammode)
-        public bool centered;       // в его центре: отсюда CANCEL выводит наружу
-        public bool glass;          // стекло комнаты цело
+        public bool humanReady;     // человек в портале
+        public bool inBeam;
+        public bool centered;       // в центре луча: отсюда CANCEL выводит наружу
+        public bool glass;
         public float glassDx;
-        public bool gunHeld;        // дробовик комнаты в руках
-        public bool hasGun;         // дробовик комнаты на месте
+        public bool gunHeld;
+        public bool hasGun;
         public float gunDx, gunDy;
-        public int exitDir;         // в какую сторону выход из комнаты
-        public bool wallLeft, wallRight;   // стенка на уровне ног в шаге: ступенька
+        public int exitDir;
+        public bool wallLeft, wallRight;   // ступенька у ног
         public bool grounded;
         public float hs;
         public bool facingRight;
     }
 
-    // Что бот помнит между кадрами. Только счётчики: решение принимается заново каждый кадр.
+    // Память мозга между кадрами.
     public struct BotState
     {
         public int mode;
@@ -105,33 +88,27 @@ namespace DuckBots
         public int grabTimer;
         public int jumpTimer;
         public int stuckFrames;
-        public int jumpHold;      // сколько ещё кадров держать начатый прыжок
-        public int jumpRest;      // сколько кадров кнопка должна побыть отпущенной
-        public int wanderDir;     // куда идём вдоль платформы, когда цель строго сверху или снизу
+        public int jumpHold;      // сколько ещё держать начатый прыжок
+        public int jumpRest;      // сколько кнопка должна побыть отпущенной
+        public int wanderDir;
         public int wanderFrames;
-        public int breakDir;      // куда уходим, когда сторож сказал «застрял»
+        public int breakDir;
 
-        // Почему решено именно так: ветка мозга (why) и способ хода (how). Это
-        // строки-константы BotBrain: журнал их печатает, самопроверка сверяет,
-        // а кадр не рождает мусора.
-        public string why, how;
-        public string jumpBy;          // кто начал текущий прыжок: ребро маршрута или догадка
-        public float jumpDX, jumpDY;   // куда он целился, относительно точки отрыва
-        public int prog;               // программа прыжка по ребру маршрута
-        public int progAt;             // идёт её кадр progAt - 1; 0 — программы нет
+        public string why, how;   // константы BotBrain: ветка Think и способ хода
+        public string jumpBy;
+        public float jumpDX, jumpDY;
+        public int prog;
+        public int progAt;        // идёт кадр progAt − 1; 0 — программы нет
 
-        // Удар по стеклу — тоже программа на несколько кадров: отойти, потом
-        // выстрелить или разогнаться и подкатиться.
-        public int smashDir;           // в какую сторону стекло; 0 — программы нет
-        public bool smashRun;          // отход кончился, бьём
-        public int smashFrames;        // кадров в нынешней фазе
-        public int smashTries;         // неудачных попыток подряд
+        public int smashDir;      // 0 — удара по стеклу нет
+        public bool smashRun;
+        public int smashFrames;
+        public int smashTries;
 
-        // Подкат от выстрела: разогнаться, лечь и лежать, пока в бота целятся.
-        public int threatFrames;       // сколько кадров подряд в бота целятся
-        public int dodgeFrames;        // сколько кадров уклонение уже идёт; 0 — не идёт
-        public int dodgeDir;           // куда разгоняемся перед подкатом
-        public int dodgeLeft;          // сколько ещё лежать, если целиться перестали
-        public int dodgeRest;          // сколько ещё кадров не ложиться после долгого лежания
+        public int threatFrames;
+        public int dodgeFrames;   // 0 — уклонения нет
+        public int dodgeDir;
+        public int dodgeLeft;
+        public int dodgeRest;
     }
 }

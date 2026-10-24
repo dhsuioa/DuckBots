@@ -4,27 +4,20 @@ namespace DuckBots
 {
     public static partial class BotBrain
     {
-        // Дуга гранатомёта (GrenadeLauncher, патрон ATGrenade). Пока SHOOT зажат, ствол
-        // поднимается на 3° за кадр, выстрел — на отпускании. Граната летит со скоростью 9:
-        // каждый кадр сдвигается на свою скорость, потом vSpeed += 0.2, не больше 8
-        // (Bullet.Update), трения нет. О утку она рвётся, осколки бьют ещё на 25–35 px.
+        // Гранатомёт: пока SHOOT зажат, ствол поднимается на LobStep° за кадр, выстрел — на
+        // отпускании. Граната летит со скоростью 9, потом vSpeed += 0.2 до 8 (Bullet.Update).
         public const float LobSpeed = 9f, LobGravity = 0.2f, LobMaxFall = 8f;
-        public const float LobHitR = 12f;      // дуга проходит так близко от центра врага — попала
-        public const float LobBarrel = 12f;    // от центра гранатомёта до дула; ствол вертится вокруг центра
-        public const int LobStep = 3;          // столько градусов ствол набирает за кадр
-        // Круче не целимся: на ровном полу граната с 75° падает в 200 px от стрелка, с 78°
-        // (отпустили на шаг позже) — в 170, а с 87° — в 40, на него самого. Поэтому и
-        // выстрел, сорвавшийся на любом угле до этого, стрелка не достанет.
-        public const int LobMax = 75;
-        public const int LobFrames = 45;       // дольше граната летит — враг уйдёт
+        public const float LobHitR = 12f;
+        public const float LobBarrel = 12f;    // от центра гранатомёта до дула
+        public const int LobStep = 3;
+        public const int LobMax = 75;          // круче граната падает на стрелка
+        public const int LobFrames = 45;
 
-        // Стена на отрезке (координаты от центра гранатомёта). Её проверяют глаза: мозг
-        // уровня не видит.
+        // Стена на отрезке, координаты от центра гранатомёта.
         public delegate bool LobWall(float x0, float y0, float x1, float y1);
 
-        // Самый пологий угол ствола, кратный LobStep, при котором граната проходит ближе
-        // LobHitR от цели (dx, dy), не задев стену; −1 — такой дуги нет. Сначала без стен:
-        // это дёшево, и стены проверяются только у дуги, которая попадает.
+        // Самый пологий угол, кратный LobStep, при котором граната проходит ближе LobHitR
+        // от цели мимо стен; −1 — дуги нет.
         public static int LobAngle(float dx, float dy, float barrel, LobWall wall)
         {
             for (int a = 0; a <= LobMax; a += LobStep)
@@ -45,7 +38,6 @@ namespace DuckBots
                 float nx = x + vx, ny = y + vy;
                 if (wall != null && wall(x, y, nx, ny)) return false;
                 if (SegDist(x, y, nx, ny, dx, dy) < LobHitR) return true;
-                // Перелетела врага или уже падает ниже него — дальше не попадёт.
                 if (dir * nx > dir * dx + LobHitR || (vy > 0f && ny > dy + LobHitR)) return false;
                 x = nx;
                 y = ny;
@@ -55,7 +47,6 @@ namespace DuckBots
             return false;
         }
 
-        // Расстояние от точки (px, py) до отрезка (x0, y0)–(x1, y1).
         private static float SegDist(float x0, float y0, float x1, float y1, float px, float py)
         {
             float ex = x1 - x0, ey = y1 - y0;

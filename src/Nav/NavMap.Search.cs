@@ -1,18 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
-using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Text;
-using DuckGame;
-using HarmonyLib;
 
 namespace DuckBots
 {
     public partial class NavMap
     {
-        // Следующая точка маршрута от одной мировой координаты к другой.
         public bool NextStep(float fromX, float fromY, float toX, float toY,
                              out float stepX, out float stepY, out int edge)
         {
@@ -28,22 +21,18 @@ namespace DuckBots
             return FirstStep(start, goal, out stepX, out stepY, out edge, out prog);
         }
 
-        // Дейкстра от узла: длина маршрута до каждого узла сразу. Одним поиском
-        // бот получает и дорогу к врагу, и длины до всех стволов, поэтому цель
-        // выбирается по длине маршрута, а не по прямой.
+        // Дейкстра от узла: длины до всех узлов сразу. Запросы ниже читают результат последнего поиска.
         public void SearchAll(int start)
         {
             if (start >= 0 && start < _nodes) Search(start, -1);
         }
 
-        // Длина маршрута до узла по последнему поиску; MaxValue — дороги нет.
+        // MaxValue — дороги нет.
         public float RouteLength(int node)
         {
             return node < 0 || node >= _nodes ? float.MaxValue : _g[node];
         }
 
-        // Первый шаг к узлу по последнему поиску: куда, каким ребром и, если это
-        // прыжок, по какой программе.
         public bool FirstStep(int start, int goal, out float stepX, out float stepY, out int edge, out int prog)
         {
             stepX = 0f; stepY = 0f; edge = Walk; prog = 0;
@@ -58,11 +47,8 @@ namespace DuckBots
             return true;
         }
 
-        // Программа прыжка, которым пришли в узел по последнему поиску.
         public int ProgInto(int node) { return _fromProg[node]; }
 
-        // Путь целиком по последнему поиску: узлы от старта до цели. Ноль — дороги
-        // нет или путь не влез в буфер.
         public int PathTo(int goal, int[] into)
         {
             if (goal < 0 || goal >= _nodes || _g[goal] >= float.MaxValue) return 0;
@@ -76,7 +62,6 @@ namespace DuckBots
             return n;
         }
 
-        // Каким ребром пришли в узел по последнему поиску.
         public int EdgeInto(int node) { return _fromEdge[node]; }
 
         private bool Linked(int node)
@@ -86,10 +71,8 @@ namespace DuckBots
             return false;
         }
 
-        // Карта картинкой для журнала: # стена, | стекло, = платформа, ^ смерть, S < >
-        // пружины, o узел, T телепорт, . пусто. Сверху линейка колонок (десятки и
-        // единицы), слева номер строки — по ним пиксели из любой строки журнала
-        // переводятся в клетку: (x − начало) / 16.
+        // Карта картинкой для журнала: # стена, | стекло, = платформа, ^ смерть, S < > \ / пружины,
+        // o узел, T телепорт. Сверху линейка колонок, слева номер строки.
         public void Render(List<string> into)
         {
             char[] line = new char[_w];
@@ -119,9 +102,7 @@ namespace DuckBots
             }
         }
 
-        // Что граф думает о движении, которое кто-то уже сделал: из точки отрыва
-        // в точку приземления. Нужно журналу игрока — каждый ответ «пути нет» на
-        // живое движение человека означает место, где бот неверно видит пространство.
+        // Знает ли граф чужое движение. «Пути нет» у движения человека — место, где бот видит карту неверно.
         public const int OffMap = -1, NoPath = 0, KnownEdge = 1, Detour = 2;
 
         public int MoveKnown(float fromX, float fromY, float toX, float toY, out int edge)
@@ -139,8 +120,7 @@ namespace DuckBots
             return Search(start, goal) ? Detour : NoPath;
         }
 
-        // A* от узла к узлу; путь остаётся в _from и _fromEdge. Без цели (goal < 0)
-        // это Дейкстра по всей карте: эвристика ноль, раньше времени не выходим.
+        // A*, путь остаётся в _from; без цели (goal < 0) — Дейкстра по всей карте.
         // ponytail: открытый список — линейный поиск минимума. Узлов на арене около
         // тысячи, это микросекунды; куча понадобится, только если карты вырастут.
         private bool Search(int start, int goal)
@@ -180,10 +160,7 @@ namespace DuckBots
                 {
                     int next = _nb[i];
                     if (_closed[next]) continue;
-                    // Прыжок дороже шага: при равной длине бот выберет пройти ногами.
-                    // Прыжок со взмахами — ещё дороже: полёт длинный, ошибиться проще.
-                    // Полёт пружиной дешевле всего — она делает работу за него.
-                    // Стекло — дороже всего: отойти, разогнаться и подкатиться.
+                    // Прыжок дороже шага, со взмахами — ещё дороже, пружина дешевле, стекло — SmashExtra.
                     float extra = _nbEdge[i] == Jump ? (ProgHover(_nbProg[i]) > 0 ? _cell * 3f : _cell)
                                 : _nbEdge[i] == Launch ? -_cell * 0.5f
                                 : _nbEdge[i] == Smash ? SmashExtra : 0f;
