@@ -65,20 +65,7 @@ namespace DuckBots
             AdoptBots();
             if (!Network.isServer) return;
 
-            for (int i = bots.Count - 1; i >= 0; i--)
-            {
-                Bot b = bots[i];
-                if (BotSettings.slots[b.slot].level != 0)
-                {
-                    b.level = BotSettings.slots[b.slot].level;
-                    continue;
-                }
-                ReleaseOnline(b);
-                bots.RemoveAt(i);
-                Log("бот " + (b.slot + 1) + " выключен и ушёл из сетевого лобби");
-                _onlineRetry = 0;
-                _framesSinceChange = 0;
-            }
+            DropDisabled(null);
 
             // Первый локальный профиль игра делает профилем хоста: бот им быть не должен.
             if (DuckNetwork.localProfile == null) return;
@@ -99,27 +86,12 @@ namespace DuckBots
                     return;
                 }
                 _noRoomLogged = false;
-                if (b == null)
-                {
-                    b = new Bot();
-                    b.slot = s;
-                    b.online = true;
-                    b.input = input;
-                    bots.Add(b);
-                }
-                b.level = BotSettings.slots[s].level;
+                if (b == null) b = NewBot(input, true);
                 b.profile = p;
                 _framesSinceChange = 0;
-                Log("бот " + (s + 1) + " (" + BotSettings.levelNames[b.level] + ") зашёл в сетевое лобби: профиль "
+                Log("бот " + (s + 1) + " (" + LevelName(b) + ") зашёл в сетевое лобби: профиль "
                     + p.name + ", слот " + p.slotType);
             }
-        }
-
-        private static Bot BotOf(int slot)
-        {
-            for (int i = 0; i < bots.Count; i++)
-                if (bots[i].slot == slot) return bots[i];
-            return null;
         }
 
         // Бот мог потеряться по дороге (через TitleScreen), а его BotInput остался в списке игроков:
@@ -136,18 +108,10 @@ namespace DuckBots
                 for (int j = 0; j < bots.Count; j++)
                     if (bots[j].input == input) { b = bots[j]; break; }
                 if (b != null && b.profile == p) continue;
-                if (b == null)
-                {
-                    b = new Bot();
-                    b.slot = input.slot;
-                    b.online = true;
-                    b.input = input;
-                    bots.Add(b);
-                }
-                b.level = BotSettings.slots[b.slot].level;
+                if (b == null) b = NewBot(input, true);
                 b.profile = p;
                 _framesSinceChange = 0;
-                Log("бот " + (b.slot + 1) + " (" + BotSettings.levelNames[b.level] + ") пришёл с нами в сеть: профиль "
+                Log("бот " + (b.slot + 1) + " (" + LevelName(b) + ") пришёл с нами в сеть: профиль "
                     + p.name + ", слот " + p.slotType);
             }
         }

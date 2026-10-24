@@ -98,9 +98,6 @@ namespace DuckBots
             public string status;   // null — годен
         }
 
-        private const int KindTrap = BotBrain.KindTrap, KindGun = BotBrain.KindGun, KindNet = BotBrain.KindNet,
-            KindBomb = BotBrain.KindBomb, KindPresent = BotBrain.KindPresent, KindBox = BotBrain.KindBox;
-
         private static readonly List<Candidate> _cands = new List<Candidate>();
         private static bool _canThrow;
 
@@ -112,12 +109,12 @@ namespace DuckBots
             foreach (Thing t in Level.current.things[typeof(TrappedDuck)])
             {
                 TrappedDuck trap = t as TrappedDuck;
-                if (trap != null && trap.captureDuck != me && TrapFree(trap)) AddCandidate(b, t, KindTrap, netHolder);
+                if (trap != null && trap.captureDuck != me && TrapFree(trap)) AddCandidate(b, t, BotBrain.KindTrap, netHolder);
             }
             foreach (Thing t in Level.current.things[typeof(Gun)])
-                AddCandidate(b, t, t is Grenade || t is Mine ? KindBomb : t is NetGun ? KindNet : KindGun, netHolder);
-            foreach (Thing t in Level.current.things[typeof(Present)]) AddCandidate(b, t, KindPresent, netHolder);
-            foreach (Thing t in Level.current.things[typeof(ItemBox)]) AddCandidate(b, t, KindBox, netHolder);
+                AddCandidate(b, t, t is Grenade || t is Mine ? BotBrain.KindBomb : t is NetGun ? BotBrain.KindNet : BotBrain.KindGun, netHolder);
+            foreach (Thing t in Level.current.things[typeof(Present)]) AddCandidate(b, t, BotBrain.KindPresent, netHolder);
+            foreach (Thing t in Level.current.things[typeof(ItemBox)]) AddCandidate(b, t, BotBrain.KindBox, netHolder);
 
             int best = -1;
             for (int i = 0; i < _cands.Count; i++)
@@ -144,21 +141,21 @@ namespace DuckBots
             c.kind = kind;
             c.node = -1;
             Gun g = t as Gun;
-            if (netHolder && kind > KindGun) c.status = "в руках сеткомёт";
+            if (netHolder && kind > BotBrain.KindGun) c.status = "в руках сеткомёт";
             else if (g != null && g.ammo <= 0) c.status = "пустой";
-            else if ((kind == KindTrap || kind == KindNet) && !_canThrow) c.status = "некуда бросить: нет пропасти";
-            else if (g != null && !g.isFatal && kind != KindNet) c.status = "несмертельный";
+            else if ((kind == BotBrain.KindTrap || kind == BotBrain.KindNet) && !_canThrow) c.status = "некуда бросить: нет пропасти";
+            else if (g != null && !g.isFatal && kind != BotBrain.KindNet) c.status = "несмертельный";
             else if (g is SuicidePistol) c.status = "стреляет назад";
             else if (g != null && Unskilled(g)) c.status = "особое: бот пока не умеет";
-            else if (kind == KindBox && ((ItemBox)t)._hit) c.status = "ящик пуст";
+            else if (kind == BotBrain.KindBox && ((ItemBox)t)._hit) c.status = "ящик пуст";
             // Фиолетовый выдаёт копию ствола только тому, кто его туда положил (Level.core._storedItems).
             else if (t is PurpleBlock) c.status = "фиолетовый: бот пока не умеет им пользоваться";
             else if (b.skip.Contains(t)) c.status = "забыт сторожем";
             else
             {
                 // Ящик бьют снизу: идти под него.
-                c.node = kind == KindBox ? _nav.NodeBelow(t.x, t.y, 4) : _nav.NodeNear(t.x, t.y);
-                if (c.node < 0) c.status = kind == KindBox ? "нет места под ящиком" : "вне карты";
+                c.node = kind == BotBrain.KindBox ? _nav.NodeBelow(t.x, t.y, 4) : _nav.NodeNear(t.x, t.y);
+                if (c.node < 0) c.status = kind == BotBrain.KindBox ? "нет места под ящиком" : "вне карты";
                 else if (_nav.RouteLength(c.node) >= float.MaxValue) c.status = "нет дороги";
             }
             _cands.Add(c);

@@ -158,19 +158,10 @@ namespace DuckBots
             }
         }
 
-        private static FieldInfo Field(Type owner, string name, ref FieldInfo cache)
-        {
-            if (cache == null)
-                cache = owner.GetField(name,
-                    BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
-            if (cache == null) BotManager.Log("не найдено поле " + owner.Name + "." + name);
-            return cache;
-        }
-
         private static void Build(TeamSelect2 ts)
         {
-            FieldInfo mf = Field(typeof(TeamSelect2), "_pauseMenu", ref _pauseMenuField);
-            FieldInfo gf = Field(typeof(TeamSelect2), "_pauseGroup", ref _pauseGroupField);
+            FieldInfo mf = _pauseMenuField = _pauseMenuField ?? BotManager.Priv(typeof(TeamSelect2), "_pauseMenu");
+            FieldInfo gf = _pauseGroupField = _pauseGroupField ?? BotManager.Priv(typeof(TeamSelect2), "_pauseGroup");
             if (mf == null || gf == null) return;
 
             UIMenu pauseMenu = mf.GetValue(ts) as UIMenu;
@@ -211,7 +202,7 @@ namespace DuckBots
         // UIMenu.Add кладёт не в components, а в приватный _section.
         public static IList<UIComponent> Section(UIMenu menu)
         {
-            FieldInfo sf = Field(typeof(UIMenu), "_section", ref _sectionField);
+            FieldInfo sf = _sectionField = _sectionField ?? BotManager.Priv(typeof(UIMenu), "_section");
             UIComponent section = sf == null ? null : sf.GetValue(menu) as UIComponent;
             return section == null ? null : section.components;
         }

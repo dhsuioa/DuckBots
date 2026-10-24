@@ -121,7 +121,6 @@ namespace DuckBots
     public class Bot
     {
         public int slot;
-        public int level;
         public bool online;                 // сетевой локальный игрок, коробки у него нет
         public Profile profile;
         public BotInput input;

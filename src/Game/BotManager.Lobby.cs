@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Reflection;
 using DuckGame;
 
@@ -6,22 +7,23 @@ namespace DuckBots
 {
     public static partial class BotManager
     {
+        // Приватное поле игры. Не нашлось — строка в журнал: игра обновилась.
+        public static FieldInfo Priv(Type owner, string name)
+        {
+            FieldInfo f = owner.GetField(name, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+            if (f == null) Log("не найдено поле " + owner.Name + "." + name);
+            return f;
+        }
+
         private static List<ProfileBox2> GetBoxes(TeamSelect2 ts)
         {
-            if (_boxesField == null)
-                _boxesField = typeof(TeamSelect2).GetField("_profiles",
-                    BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
-            if (_boxesField == null) { Log("не найдено поле TeamSelect2._profiles"); return null; }
-            return _boxesField.GetValue(ts) as List<ProfileBox2>;
+            _boxesField = _boxesField ?? Priv(typeof(TeamSelect2), "_profiles");
+            return _boxesField == null ? null : _boxesField.GetValue(ts) as List<ProfileBox2>;
         }
 
         private static FieldInfo BoxInputField()
         {
-            if (_boxInputField == null)
-                _boxInputField = typeof(ProfileBox2).GetField("_inputProfile",
-                    BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
-            if (_boxInputField == null) Log("не найдено поле ProfileBox2._inputProfile");
-            return _boxInputField;
+            return _boxInputField = _boxInputField ?? Priv(typeof(ProfileBox2), "_inputProfile");
         }
 
         private static InputProfile GetBoxInput(ProfileBox2 box)
@@ -44,11 +46,38 @@ namespace DuckBots
             return false;
         }
 
-        private static bool HasBot(int slot)
+        private static Bot BotOf(int slot)
         {
             for (int i = 0; i < bots.Count; i++)
-                if (bots[i].slot == slot) return true;
-            return false;
+                if (bots[i].slot == slot) return bots[i];
+            return null;
+        }
+
+        private static Bot NewBot(BotInput input, bool online)
+        {
+            Bot b = new Bot();
+            b.slot = input.slot;
+            b.input = input;
+            b.online = online;
+            bots.Add(b);
+            return b;
+        }
+
+        private static string LevelName(Bot b) { return BotSettings.levelNames[BotSettings.slots[b.slot].level]; }
+
+        // Выключенные в меню BOTS — долой.
+        private static void DropDisabled(List<ProfileBox2> boxes)
+        {
+            for (int i = bots.Count - 1; i >= 0; i--)
+            {
+                Bot b = bots[i];
+                if (BotSettings.slots[b.slot].level != 0) continue;
+                Release(b, boxes != null && boxes.Contains(b.box));
+                bots.RemoveAt(i);
+                Log("бот " + (b.slot + 1) + (b.online ? " выключен и ушёл из сетевого лобби" : " выключен и снят со слота"));
+                if (b.online) _onlineRetry = 0;
+                _framesSinceChange = 0;
+            }
         }
 
         // Бот занимает свободную коробку и жмёт в ней START, остальное игра делает сама.
@@ -68,19 +97,7 @@ namespace DuckBots
             List<ProfileBox2> boxes = GetBoxes(ts);
             if (boxes == null) return;
 
-            for (int i = bots.Count - 1; i >= 0; i--)
-            {
-                Bot b = bots[i];
-                if (BotSettings.slots[b.slot].level != 0)
-                {
-                    b.level = BotSettings.slots[b.slot].level;
-                    continue;
-                }
-                Release(b, boxes.Contains(b.box));
-                bots.RemoveAt(i);
-                Log("бот " + (b.slot + 1) + " выключен и снят со слота");
-                _framesSinceChange = 0;
-            }
+            DropDisabled(boxes);
 
             // Живой игрок жмёт START в коробке с ботом: её ввод подменён, сама она нажатия не видит.
             // Бот уступает её, игрок входит вторым нажатием. START человека в своей коробке — не вход.
@@ -101,21 +118,16 @@ namespace DuckBots
 
             for (int s = 0; s < BotSettings.Max; s++)
             {
-                if (BotSettings.slots[s].level == 0) continue;
-                if (HasBot(s)) continue;
+                if (BotSettings.slots[s].level == 0 || BotOf(s) != null) continue;
 
                 ProfileBox2 box = FindFreeBox(boxes);
                 if (box == null) break;
 
-                Bot b = new Bot();
-                b.slot = s;
-                b.level = BotSettings.slots[s].level;
-                b.input = new BotInput(s);
+                Bot b = NewBot(new BotInput(s), false);
                 b.pressStartFrames = 2;
                 Attach(b, box);
-                bots.Add(b);
                 _framesSinceChange = 0;
-                Log("бот " + (s + 1) + " (" + BotSettings.levelNames[b.level] + ") занял коробку "
+                Log("бот " + (s + 1) + " (" + LevelName(b) + ") занял коробку "
                     + boxes.IndexOf(box) + " (" + box.profile.name + "), жмёт START");
             }
         }

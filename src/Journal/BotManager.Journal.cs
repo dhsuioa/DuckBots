@@ -17,7 +17,7 @@ namespace DuckBots
                     Bot b = bots[i];
                     Profile p = b.profile;
                     Duck d = p == null ? null : p.duck;
-                    string line = "  бот " + (b.slot + 1) + " [" + BotSettings.levelNames[b.level]
+                    string line = "  бот " + (b.slot + 1) + " [" + LevelName(b)
                         + "] (" + (p == null ? "-" : p.name) + "): команда="
                         + (p == null || p.team == null ? "нет" : p.team.name)
                         + ", утка=" + (d == null ? "нет" : "есть");
@@ -421,9 +421,7 @@ namespace DuckBots
                 else if (t is SmallFire) next = ((SmallFire)t).firedFrom;
                 else if (t is Flare)
                 {
-                    if (_flareOwner == null)
-                        _flareOwner = typeof(Flare).GetField("_owner",
-                            BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
+                    _flareOwner = _flareOwner ?? Priv(typeof(Flare), "_owner");
                     next = _flareOwner.GetValue(t) as Thing;
                 }
                 if (next == null) return t;

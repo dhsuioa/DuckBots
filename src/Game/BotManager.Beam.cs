@@ -53,9 +53,7 @@ namespace DuckBots
 
         private static Window RoomWindow(ProfileBox2 box)
         {
-            if (_windowField == null)
-                _windowField = typeof(ProfileBox2).GetField("_window",
-                    BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+            _windowField = _windowField ?? Priv(typeof(ProfileBox2), "_window");
             return _windowField == null ? null : _windowField.GetValue(box) as Window;
         }
 
