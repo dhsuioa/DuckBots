@@ -24,15 +24,7 @@ namespace DuckBots
             b.flightStart = -1;
             if (start < 0)
             {
-                if (wantPickup)
-                {
-                    Thing near = NearestPickup(b, me);
-                    if (near != b.pickup)
-                        Log(BotName(b) + ": цель=" + (near == null ? "нет" : Describe(near))
-                            + " по прямой: карты нет");
-                    b.pickup = near;
-                    b.pickupNode = -1;
-                }
+                if (wantPickup) ChoosePickup(b, me, netHolder, false);
                 return;
             }
 
@@ -78,7 +70,7 @@ namespace DuckBots
 
             if (wantPickup)
             {
-                ChoosePickup(b, me, netHolder);
+                ChoosePickup(b, me, netHolder, true);
                 if (b.pickup != null)
                 {
                     b.hasPickupStep = _nav.FirstStep(start, b.pickupNode,
@@ -95,44 +87,45 @@ namespace DuckBots
             public Thing thing;
             public int kind;
             public int node;
+            public float len;       // длина маршрута, без карты — по прямой
             public string status;   // null — годен
         }
 
         private static readonly List<Candidate> _cands = new List<Candidate>();
         private static bool _canThrow;
 
-        private static void ChoosePickup(Bot b, Duck me, bool netHolder)
+        // Одно правило и с картой, и без неё (бот вне карты): лучший вид цели, внутри вида — ближе.
+        private static void ChoosePickup(Bot b, Duck me, bool netHolder, bool routed)
         {
             _cands.Clear();
             int side;
-            _canThrow = _nav.NearestAbyssEdge(out side) >= 0;
+            _canThrow = routed && _nav.NearestAbyssEdge(out side) >= 0;
             foreach (Thing t in Level.current.things[typeof(TrappedDuck)])
             {
                 TrappedDuck trap = t as TrappedDuck;
-                if (trap != null && trap.captureDuck != me && TrapFree(trap)) AddCandidate(b, t, BotBrain.KindTrap, netHolder);
+                if (trap != null && trap.captureDuck != me && TrapFree(trap)) AddCandidate(b, me, t, BotBrain.KindTrap, netHolder, routed);
             }
             foreach (Thing t in Level.current.things[typeof(Gun)])
-                AddCandidate(b, t, t is Grenade || t is Mine ? BotBrain.KindBomb : t is NetGun ? BotBrain.KindNet : BotBrain.KindGun, netHolder);
-            foreach (Thing t in Level.current.things[typeof(Present)]) AddCandidate(b, t, BotBrain.KindPresent, netHolder);
-            foreach (Thing t in Level.current.things[typeof(ItemBox)]) AddCandidate(b, t, BotBrain.KindBox, netHolder);
+                AddCandidate(b, me, t, t is Grenade || t is Mine ? BotBrain.KindBomb : t is NetGun ? BotBrain.KindNet : BotBrain.KindGun,
+                    netHolder, routed);
+            foreach (Thing t in Level.current.things[typeof(Present)]) AddCandidate(b, me, t, BotBrain.KindPresent, netHolder, routed);
+            foreach (Thing t in Level.current.things[typeof(ItemBox)]) AddCandidate(b, me, t, BotBrain.KindBox, netHolder, routed);
 
             int best = -1;
             for (int i = 0; i < _cands.Count; i++)
             {
                 Candidate c = _cands[i];
                 if (c.status != null) continue;
-                if (best < 0 || BotBrain.BetterPickup(c.kind, _nav.RouteLength(c.node),
-                                                      _cands[best].kind, _nav.RouteLength(_cands[best].node)))
-                    best = i;
+                if (best < 0 || BotBrain.BetterPickup(c.kind, c.len, _cands[best].kind, _cands[best].len)) best = i;
             }
             Thing chosen = best < 0 ? null : _cands[best].thing;
-            if (chosen != b.pickup) LogCandidates(b, me, best);
+            if (chosen != b.pickup) LogCandidates(b, me, best, routed);
             b.pickup = chosen;
             b.pickupNode = best < 0 ? -1 : _cands[best].node;
         }
 
         // Только видимое: в сети ящик держит содержимое заранее, невидимым (ItemBox.UpdateContainedObject).
-        private static void AddCandidate(Bot b, Thing t, int kind, bool netHolder)
+        private static void AddCandidate(Bot b, Duck me, Thing t, int kind, bool netHolder, bool routed)
         {
             Holdable h = t as Holdable;
             if (t.removeFromLevel || !t.visible || (h != null && (h.owner != null || !h.canPickUp))) return;
@@ -151,22 +144,27 @@ namespace DuckBots
             // Фиолетовый выдаёт копию ствола только тому, кто его туда положил (Level.core._storedItems).
             else if (t is PurpleBlock) c.status = "фиолетовый: бот пока не умеет им пользоваться";
             else if (b.skip.Contains(t)) c.status = "забыт сторожем";
+            else if (!routed)
+            {
+                float dx = t.x - me.x, dy = t.y - me.y;
+                c.len = (float)Math.Sqrt(dx * dx + dy * dy);
+            }
             else
             {
                 // Ящик бьют снизу: идти под него.
                 c.node = kind == BotBrain.KindBox ? _nav.NodeBelow(t.x, t.y, 4) : _nav.NodeNear(t.x, t.y);
                 if (c.node < 0) c.status = kind == BotBrain.KindBox ? "нет места под ящиком" : "вне карты";
-                else if (_nav.RouteLength(c.node) >= float.MaxValue) c.status = "нет дороги";
+                else if ((c.len = _nav.RouteLength(c.node)) >= float.MaxValue) c.status = "нет дороги";
             }
             _cands.Add(c);
         }
 
-        private static void LogCandidates(Bot b, Duck me, int best)
+        private static void LogCandidates(Bot b, Duck me, int best, bool routed)
         {
             int usable = 0;
             for (int i = 0; i < _cands.Count; i++) if (_cands[i].status == null) usable++;
             Log(BotName(b) + ": цель=" + (best < 0 ? "нет" : Describe(_cands[best].thing)
-                    + " путь=" + (int)_nav.RouteLength(_cands[best].node))
+                    + " путь=" + (int)_cands[best].len) + (routed ? "" : " по прямой: карты нет")
                 + " кандидатов=" + _cands.Count + " годных=" + usable
                 + " было=" + (b.pickup == null ? "нет" : b.pickup.GetType().Name));
             for (int i = 0; i < _cands.Count; i++)
@@ -176,18 +174,8 @@ namespace DuckBots
                 Detail(BotName(b) + ": кандидат " + Describe(c.thing) + " x=" + (int)c.thing.x
                     + " y=" + (int)c.thing.y + " по_прямой=" + (int)Math.Sqrt(dx * dx + dy * dy)
                     + (c.status != null ? " отброшен — " + c.status
-                        : " путь=" + (int)_nav.RouteLength(c.node) + (i == best ? " ВЫБРАН" : "")));
+                        : " путь=" + (int)c.len + (i == best ? " ВЫБРАН" : "")));
             }
-        }
-
-        private static Thing NearestPickup(Bot b, Duck me)
-        {
-            _skipFor = b.skip;
-            Thing t = Level.current.NearestThingFilter<Gun>(me.position, _freeGun);
-            if (t == null) t = Level.current.NearestThingFilter<Present>(me.position, _freePresent);
-            if (t == null) t = Level.current.NearestThingFilter<ItemBox>(me.position, _liveBox);
-            _skipFor = null;
-            return t;
         }
 
         private static readonly int[] _pathBuf = new int[512];

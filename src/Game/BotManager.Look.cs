@@ -6,10 +6,7 @@ namespace DuckBots
     public static partial class BotManager
     {
         // Один раз: без нового делегата каждый кадр.
-        private static readonly Predicate<Thing> _freeGun = IsFreeGun;
-        private static readonly Predicate<Thing> _liveBox = IsLiveBox;
         private static readonly Predicate<Thing> _armedExplosive = IsArmedExplosive;
-        private static readonly Predicate<Thing> _freePresent = IsFreePresent;
 
         private const float FootProbe = 14f;    // шаг вперёд от центра утки
         private const float GlassSee = 64f;
@@ -19,17 +16,7 @@ namespace DuckBots
         private const int SpotPatience = 120, SpotOffFrames = 180;
         private const float KickVs = -5.5f;     // своим прыжком (−4.9) быстрее вверх не взлететь
 
-        private static bool IsFreeGun(Thing t)
-        {
-            Gun g = t as Gun;
-            return g != null && Usable(g) && g.owner == null && !g.removeFromLevel && g.visible && !Skipped(t);
-        }
-
-        // Предикат создан один раз и о боте не знает: цели бота выставляются перед поиском.
-        private static SkipList _skipFor;
         private const int SkipFrames = 180;
-
-        private static bool Skipped(Thing t) { return _skipFor != null && _skipFor.Contains(t); }
 
         // Целое стекло без решётки пуле не стена: толщина окна 0.3, пуля его бьёт и летит дальше.
         private static bool Wall(Vec2 a, Vec2 b, bool glassGun)
@@ -41,18 +28,6 @@ namespace DuckBots
                 if (w == null || w.bars.value) return true;
             }
             return false;
-        }
-
-        private static bool IsFreePresent(Thing t)
-        {
-            Present p = t as Present;
-            return p != null && p.owner == null && !p.removeFromLevel && p.visible && !Skipped(t);
-        }
-
-        private static bool IsLiveBox(Thing t)
-        {
-            ItemBox b = t as ItemBox;
-            return b != null && !b._hit && !b.removeFromLevel && !Skipped(t);
         }
 
         // Бежать только от гранаты с выдернутой чекой. Мина — нажимная ловушка: её клетку обходит
