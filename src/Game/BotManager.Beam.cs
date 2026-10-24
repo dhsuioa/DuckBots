@@ -5,16 +5,13 @@ using DuckGame;
 
 namespace DuckBots
 {
-    // Лобби: выход в портал вслед за человеком. Портал — луч TeamBeam в щели между
-    // рядами комнат: утку в своём прямоугольнике он забирает сам (TakeDuck, beammode),
-    // и её коробка готова. Бот выходит туда так же, как человек: дробовик со ступеньки,
-    // стекло в проёме, шаг наружу (BotBrain.Lobby).
+    // Лобби: портал — луч TeamBeam между рядами комнат. Утку в своём прямоугольнике он забирает
+    // сам (beammode), и её коробка готова.
     public static partial class BotManager
     {
         private static FieldInfo _windowField;
-        private const int BeamPatience = 600;   // 10 с: дольше не выбрался — луч забирает сам
+        private const int BeamPatience = 600;   // дольше не выбрался — луч забирает сам
 
-        // Готов ли живой человек: активная коробка не наша, и её утка в портале.
         private static bool HumanReady(TeamSelect2 ts)
         {
             List<ProfileBox2> boxes = GetBoxes(ts);
@@ -28,7 +25,7 @@ namespace DuckBots
             return false;
         }
 
-        // Своя коробка — по коробке или по профилю: у сетевого бота коробки нет.
+        // По коробке или по профилю: у сетевого бота коробки нет.
         private static bool IsBotBox(ProfileBox2 box)
         {
             for (int i = 0; i < bots.Count; i++)
@@ -45,7 +42,7 @@ namespace DuckBots
             return null;
         }
 
-        // Лучей в ванили два: _beam на x=160 у первых двух колонок, _beam2 у третьей.
+        // Лучей в ванили два: _beam у первых двух колонок, _beam2 у третьей.
         private static TeamBeam BeamNear(TeamSelect2 ts, float x)
         {
             TeamBeam a = ts._beam, c = ts._beam2;
@@ -62,15 +59,13 @@ namespace DuckBots
             return _windowField == null ? null : _windowField.GetValue(box) as Window;
         }
 
-        // Стенка у ног в шаге от утки — ступенька, на которую надо запрыгнуть. Стекло не
-        // в счёт: его бьют.
+        // Стенка у ног — ступенька. Стекло не в счёт: его бьют.
         private static bool StepWall(Duck d, int dir)
         {
             Block k = Level.CheckPoint<Block>(new Vec2(d.x + dir * 12f, d.bottom - 4f));
             return k != null && !(k is Window);
         }
 
-        // Один кадр бота в лобби: обстановка, журнал, запасной путь и решение.
         private static ushort LobbyStep(Bot b, Duck d, TeamSelect2 ts, bool humanReady)
         {
             ProfileBox2 box = BoxOf(ts, d);
@@ -99,7 +94,6 @@ namespace DuckBots
             v.hs = d.hSpeed;
             v.facingRight = d.offDir > 0;
 
-            // Журнал: где что в этой комнате (раз на лобби) и что бот сделал.
             string who = BotName(b);
             if (b.lobbyBox != box)
             {

@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Reflection;
 using DuckGame;
@@ -7,16 +6,10 @@ namespace DuckBots
 {
     public static partial class BotManager
     {
-        // --- сеть ---
-
-        // Входя в сетевое лобби, игра сверяет отпечаток модов (ModLoader.modHash: хеш имён
-        // и версий всех включённых модов) и рвёт соединение, если он разный. Мод не добавляет
-        // ни своих Thing, ни NetMessage, так что для сети его будто нет, — и отпечаток мы
-        // считаем без себя: друг без мода заходит к нам, мы — в ванильные лобби. Формулу не
-        // повторяем: на время вызова убираем себя из списка модов и зовём настоящий GetModHash.
-        // Зовётся в первом кадре (Tick), а не из OnPostInitialize: тот игра вызывает изнутри
-        // foreach по этому же _sortedAccessibleMods, и правка списка роняла загрузку игры
-        // («Коллекция была изменена»). OnStart зовётся так же.
+        // В сетевое лобби игра пускает только при одинаковом отпечатке модов (ModLoader.modHash).
+        // Мод для сети невидим, поэтому отпечаток считаем без себя: настоящим GetModHash, вынув
+        // себя из списка. Только из первого кадра: OnPostInitialize и OnStart игра зовёт изнутри
+        // foreach по _sortedAccessibleMods, и правка списка оттуда роняет запуск.
         public static Mod hideFromHash;
 
         public static void HideFromModHash(Mod self)
@@ -45,21 +38,12 @@ namespace DuckBots
             Log("мод: отпечаток модов для сети " + before + " → " + hashProp.GetValue(null, null));
         }
 
-        // В сети бот — локальный игрок того, у кого стоит мод, как второй геймпад: свой
-        // сетевой профиль, команда и утка, а остальным игра сама рассылает его как обычного
-        // игрока. Своих локальных уток ведёт сама их машина, поэтому боты работают и у хоста,
-        // и в гостях. Уходя в сеть, боты не снимаются, а ждут профиля (profile == null):
-        // - в гостях профиль даёт игра — при входе в чужое лобби она приводит всех из списка
-        //   игроков (FillMatchmakingProfiles) и раздаёт их новым профилям ввод из этого
-        //   списка; наш BotInput — метка, по ней профиль и находим (Adopt);
-        // - у хоста из списка ботов вычёркивает DropBotsFromMatchmaking, и сажает их мод:
-        //   JoinLocalDuck. Мест нет — повтор раз в секунду: кто-то может уйти.
-        // Состав в гостях — тот, с которым пришли: JoinLocalDuck у клиента не работает.
+        // Бот в сети — локальный игрок того, у кого мод, как второй геймпад. В гостях профиль даёт
+        // игра, а мы находим его по BotInput (AdoptBots). У хоста сажаем сами (JoinLocalDuck), мест
+        // нет — повтор раз в секунду. Состав в гостях — тот, с которым пришли.
         private static int _onlineRetry;
-        private static bool _noRoomLogged;   // «мест нет» — одна строка, а не раз в секунду
+        private static bool _noRoomLogged;
 
-        // Офлайновая посадка снимается (вечный профиль слота, коробка), бот остаётся
-        // ждать сетевого профиля с тем же BotInput.
         private static void GoOnline(List<ProfileBox2> liveBoxes)
         {
             for (int i = 0; i < bots.Count; i++)
@@ -81,7 +65,6 @@ namespace DuckBots
             AdoptBots();
             if (!Network.isServer) return;
 
-            // Выключенные в меню — из лобби долой.
             for (int i = bots.Count - 1; i >= 0; i--)
             {
                 Bot b = bots[i];
@@ -97,8 +80,7 @@ namespace DuckBots
                 _framesSinceChange = 0;
             }
 
-            // Первый локальный профиль игра делает профилем хоста (PrepareProfile:
-            // localProfile, hostProfile) — бот не должен оказаться им ни при каком порядке.
+            // Первый локальный профиль игра делает профилем хоста: бот им быть не должен.
             if (DuckNetwork.localProfile == null) return;
             if (_onlineRetry > 0) { _onlineRetry--; return; }
             for (int s = 0; s < BotSettings.Max; s++)
@@ -140,10 +122,8 @@ namespace DuckBots
             return null;
         }
 
-        // Свои сетевые профили с нашим BotInput — боты, которых игра привела с нами.
-        // Бот мог и потеряться по дороге: если вход в чужое лобби идёт через TitleScreen,
-        // там ботов снимают, а BotInput в списке игроков остаётся. Тогда заводим его
-        // заново по номеру слота из ввода — иначе утка стояла бы у друга без мозга.
+        // Бот мог потеряться по дороге (через TitleScreen), а его BotInput остался в списке игроков:
+        // заводим заново по слоту из ввода.
         private static void AdoptBots()
         {
             List<Profile> ps = DuckNetwork.profiles;
@@ -172,10 +152,7 @@ namespace DuckBots
             }
         }
 
-        // Kick для слота Local — штатный уход местного игрока: клиентам уходит
-        // NMClientDisconnect, профиль сбрасывается. Ввод ResetProfile не чистит, а сеттер
-        // inputProfile следующего хозяина профиля дёрнул бы Rumble() у нашего BotInput, —
-        // поэтому ссылку обнуляем сами.
+        // ResetProfile ввод не чистит, а сеттер inputProfile следующего хозяина дёрнул бы Rumble() у BotInput.
         // ponytail: Kick ставит слоту Open, даже если до бота он был Friend или Invite.
         private static void ReleaseOnline(Bot b)
         {
@@ -185,11 +162,7 @@ namespace DuckBots
             b.profile.SetInputProfileLink(null);
         }
 
-        // В чужую игру боты идут только к своим: по приглашению или из списка друзей Steam.
-        // Мод для сети невидим, и в лобби незнакомцев из быстрого поиска или браузера
-        // серверов боты пришли бы без спроса. Оба «своих» пути идут через
-        // NCSteam.OnInviteReceived, он запоминает inviteLobbyID; SendJoinMessage, перед
-        // которым нас зовут, решает по нему же, приглашён ли игрок, и сбрасывает его.
+        // В чужую игру боты идут только по приглашению или к другу из Steam: оба пути ставят inviteLobbyID.
         public static void BotsOnlyForFriends()
         {
             if (NCSteam.inviteLobbyID != 0UL) { Log("мод: заходим по приглашению, боты идут с нами"); return; }
@@ -197,13 +170,6 @@ namespace DuckBots
             if (removed > 0) Log("мод: заходим не по приглашению — к незнакомцам ботов не берём: " + removed);
         }
 
-        // Уходя в сеть из лобби, игра собирает в этот список всех, у кого есть команда,
-        // вместе с их вводом. Хостя, DuckNetwork.Host сажает каждого из списка локальным
-        // игроком. Этот путь для ботов не проверен, и есть повод его опасаться:
-        // PrepareForOnline сразу после Host переносит команды по номерам коробок, а боты
-        // сидят в коробках с конца. Проверена 20.10 посадка через JoinLocalDuck — поэтому
-        // хостя ботов из списка вычёркиваем и сажаем сами (SyncSlotsOnline). В гостях
-        // список оставляем: так боты и приходят с нами.
         public static void DropBotsFromMatchmaking()
         {
             int removed = UIMatchmakingBox.core.matchmakingProfiles.RemoveAll(p => p.inputProfile is BotInput);

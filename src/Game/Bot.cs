@@ -2,19 +2,12 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Text;
 using DuckGame;
-using HarmonyLib;
 
 namespace DuckBots
 {
-    // Короткая память о недостижимых целях. Бот выбирает ближайший ствол по прямой,
-    // а дороги к нему может не быть вовсе — ствол в закрытой комнате этажом ниже.
-    // Без этой памяти он держался за такой ствол бесконечно, а в логе три бота
-    // разом стояли с «маршрут=нет» над одним и тем же стволом. Забытая цель
-    // возвращается через несколько секунд: геометрия меняется, дорога может открыться.
+    // Короткая память о целях, к которым нет дороги: забытая цель через несколько секунд
+    // возвращается, геометрия могла измениться.
     public class SkipList
     {
         private readonly object[] _items = new object[4];
@@ -47,8 +40,7 @@ namespace DuckBots
         }
     }
 
-    // Настройка одного слота. Отдельный объект, а не элемент int[], потому что
-    // FieldBinding умеет привязываться только к полю объекта по имени.
+    // Объект, а не элемент int[]: FieldBinding привязывается только к полю объекта.
     public class BotSlot
     {
         public int level;
@@ -56,17 +48,14 @@ namespace DuckBots
 
     public static class BotSettings
     {
-        public const int Max = 7; // восемь игроков минус место человеку
+        public const int Max = 7;   // восемь игроков минус человек
 
-        // Значение level — индекс в этом списке, так UIMenuItemNumber показывает
-        // слова вместо цифр. Шрифты игры — ASCII-спрайтшиты, кириллицы в них нет.
+        // level — индекс сюда. Шрифты игры — ASCII, кириллицы в них нет.
         public static readonly List<string> levelNames =
             new List<string> { "OFF", "DUCKLING", "AVERAGE", "GOOD", "BEAST" };
 
         public static readonly BotSlot[] slots = CreateSlots();
 
-        // Выбор в меню переживает перезапуск игры: строка уровней в файле в папке мода.
-        // Без файла все слоты OFF — игрок из Workshop не должен найти в лобби чужую утку.
         private static string _file;
         private static readonly int[] _saved = new int[Max];
 
@@ -77,8 +66,8 @@ namespace DuckBots
             return s;
         }
 
-        // «2,0,4» → уровни слотов. Нехватка, мусор и числа вне списка — OFF:
-        // файл правят руками, и кривая строка не должна посадить бота в слот.
+        // «2,0,4» → уровни слотов. Нет файла, мусор, число вне списка — OFF: игрок из Workshop
+        // не должен найти в лобби чужую утку.
         public static int[] Parse(string text)
         {
             int[] levels = new int[Max];
@@ -110,7 +99,6 @@ namespace DuckBots
             for (int i = 0; i < Max; i++) _saved[i] = slots[i].level = levels[i];
         }
 
-        // Каждый кадр лобби: семь сравнений, файл пишется только когда выбор изменился.
         public static void SaveIfChanged()
         {
             if (_file == null) return;
@@ -132,50 +120,44 @@ namespace DuckBots
 
     public class Bot
     {
-        public int slot;                   // индекс в BotSettings.slots
+        public int slot;
         public int level;
-        public bool online;                // сетевой локальный игрок хоста, коробки у него нет
+        public bool online;                 // сетевой локальный игрок, коробки у него нет
         public Profile profile;
         public BotInput input;
         public ProfileBox2 box;
-        public InputProfile savedBoxInput; // что лежало в коробке до подмены
+        public InputProfile savedBoxInput;  // что лежало в коробке до подмены
         public int pressStartFrames;
-        public int routeWait;                                        // до следующего пересчёта маршрута
+        public int routeWait;               // до пересчёта маршрута
         public bool hasEnemyStep, hasPickupStep;
         public float enemyStepX, enemyStepY, pickupStepX, pickupStepY;
         public int enemyStepEdge, pickupStepEdge;
         public int enemyStepProg, pickupStepProg;
-        public BotState state;   // счётчики мозга, живут между кадрами
-        public BotView view;     // последняя обстановка, её же пишем в лог и рисуем над уткой
-        public readonly SkipList skip = new SkipList();   // цели, забытые сторожем
-        public Window glass;                               // стекло, по которому бот бил в прошлом кадре
-        public bool dodging;                               // в прошлом кадре уклонялся от прицела
-        public Thing pickup;                                // за чем бот сейчас идёт
-        public int pickupNode = -1;                         // узел, куда за ней идти
-        public Thing danger;                                // от чего бежит: в журнал
-        public bool atSpot;                                 // стоит на позиции для выстрела
-        public int spotWait, spotOff;                       // ждёт на ней без линии; позиция забыта
-        public float prevVs;                                // скорость по y в прошлом кадре: толчок пружины
-        public int flightStart = -1;                        // узел над пружиной, с которой подбросило
-        public bool hasThrowStep, atThrowSpot;              // несёт пойманного: путь к краю
+        public BotState state;
+        public BotView view;
+        public readonly SkipList skip = new SkipList();
+        public Window glass;                // по которому бил в прошлом кадре
+        public bool dodging;
+        public Thing pickup;
+        public int pickupNode = -1;
+        public Thing danger;
+        public bool atSpot;
+        public int spotWait, spotOff;
+        public float prevVs;                // для толчка пружины
+        public int flightStart = -1;        // узел над пружиной, с которой подбросило
+        public bool hasThrowStep, atThrowSpot;
         public float throwStepX, throwStepY;
         public int throwStepEdge, throwStepProg, throwDir;
-        public float routeStartX = float.NaN;               // центр узла, откуда считан маршрут
+        public float routeStartX = float.NaN;   // центр узла, откуда считан маршрут
 
-        // Сторож залипания: где бот стоял, сколько кадров не сдвинулся оттуда,
-        // и сколько ещё уходить в сторону, если сторож уже сработал.
         public float anchorX, anchorY;
         public int anchorFrames, breakoutFrames;
 
-        // Лобби: свои счётчики мозга (не путать с матчевыми), сколько кадров человек
-        // уже в портале, а бот нет, и что журнал видел в прошлом кадре.
-        public BotState lobbyState;
+        public BotState lobbyState;         // свои счётчики мозга в лобби
         public int lobbyFrames;
         public bool lobbyGlass, lobbyBeam;
         public ProfileBox2 lobbyBox;
 
-        // Журнал: режим прошлого кадра (смена пишется с причиной), сколько кадров
-        // подряд ни одной кнопки, и маршрут, по которому бот шёл в прошлый раз.
         public int lastMode = -1;
         public int idleFrames;
         public readonly int[] path = new int[512];

@@ -1,18 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
-using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Text;
+﻿using System.Collections.Generic;
 using DuckGame;
-using HarmonyLib;
 
 namespace DuckBots
 {
-    // Ввод бота. Утка читает управление только через inputProfile.Down/Pressed/Released,
-    // а эти методы у InputProfile виртуальные — значит достаточно ответить из своей маски,
-    // и всё остальное (физика, оружие, смерть) игра сделает как для живого игрока.
+    // Утка читает ввод через виртуальные Down/Pressed/Released: бот отвечает из своей маски,
+    // а физику, оружие и смерть игра обрабатывает как для живого игрока.
     public class BotInput : InputProfile
     {
         public const ushort LEFT = 1;
@@ -26,7 +18,7 @@ namespace DuckBots
         public const ushort START = 256;
         public const ushort RAGDOLL = 512;
         public const ushort STRAFE = 1024;
-        public const ushort CANCEL = 2048;   // в лобби: выйти из портала (TeamBeam)
+        public const ushort CANCEL = 2048;   // в лобби: выйти из портала
 
         private static readonly Dictionary<string, ushort> _bits = new Dictionary<string, ushort>
         {
@@ -40,15 +32,14 @@ namespace DuckBots
         private ushort _mask;
         private ushort _prevMask;
 
-        // Строка меню BOTS, к которой относится ввод. По ней бот находится снова, когда
-        // игра сама привела его в сетевую игру (BotManager.AdoptBots).
+        // Строка меню BOTS: по ней бот находится снова, когда игра сама привела его в сеть.
         public readonly int slot;
 
         public BotInput(int slot) : base("bot" + (slot + 1)) { this.slot = slot; }
 
         public ushort mask { get { return _mask; } }
 
-        // Ровно один раз за кадр, до того как игра начнёт читать ввод.
+        // Раз за кадр, до того как игра читает ввод.
         public void SetMask(ushort value)
         {
             _prevMask = _mask;
@@ -80,8 +71,5 @@ namespace DuckBots
             ushort b = BitFor(trigger);
             return (_mask & b) == 0 && (_prevMask & b) != 0;
         }
-
-        // Стики и триггеры не трогаем: список устройств у бота пуст,
-        // поэтому база сама вернёт ноль, и утка целится только крестовиной.
     }
 }

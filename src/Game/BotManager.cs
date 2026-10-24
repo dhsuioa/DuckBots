@@ -1,12 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
 using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Text;
 using DuckGame;
-using HarmonyLib;
 
 namespace DuckBots
 {
@@ -29,12 +24,11 @@ namespace DuckBots
             if (hideFromHash != null)
             {
                 Mod self = hideFromHash;
-                hideFromHash = null; // один раз, даже если упадёт
+                hideFromHash = null;
                 HideFromModHash(self);
             }
 
-            // Новый уровень: сводка прошлого раунда, журнал уток заново. Здесь, в
-            // начале кадра, чтобы все строки нового раунда шли уже с его номером.
+            // Сводка прошлого раунда — в начале кадра, до строк нового.
             if (Level.current != _traceLevel)
             {
                 RoundSummary();
@@ -47,9 +41,8 @@ namespace DuckBots
                 }
             }
 
-            // Единственный офлайновый выход из лобби наружу — TitleScreen.
-            // Экраны между раундами трогать нельзя: там идёт серия, и снимать
-            // ботов с команд посреди неё значит ломать счёт.
+            // Единственный офлайновый выход из лобби — TitleScreen. Между раундами ботов не снимать:
+            // идёт серия, и счёт сломался бы.
             if (Level.current is TitleScreen)
             {
                 ReleaseAll(null);
@@ -60,12 +53,8 @@ namespace DuckBots
             TeamSelect2 lobby = Level.current as TeamSelect2;
             if (lobby != null)
             {
-                // Боты сидят либо по-офлайновому (коробка, вечный профиль слота), либо
-                // по-сетевому (свой сетевой профиль) — смешанным список не бывает. Лобби
-                // стало сетевым — офлайновую посадку снимаем, а боты ждут сетевых профилей
-                // (GoOnline). Стало обратно офлайновым — снимаем целиком. Всё это до Rebind:
-                // он искал бы офлайновые профили среди сетевых, не нашёл бы и бросил бы
-                // BotInput в профиле, который потом достанется человеку.
+                // Посадка офлайн и в сети не смешивается. Смена снимается до Rebind: тот искал бы
+                // офлайновые профили среди сетевых и бросил бы BotInput в профиле человека.
                 if (bots.Count > 0 && bots[0].online != Network.isActive)
                 {
                     if (Network.isActive) GoOnline(GetBoxes(lobby));
@@ -75,8 +64,7 @@ namespace DuckBots
                 if (Network.isActive) SyncSlotsOnline();
                 else
                 {
-                    // Возврат из матча создаёт новый TeamSelect2 со своими коробками,
-                    // старые ссылки протухли — переехать на новые.
+                    // Возврат из матча создаёт новый TeamSelect2 со своими коробками.
                     if (lobby != _lastLobby) Rebind(lobby);
                     SyncSlots(lobby);
                 }
@@ -93,8 +81,6 @@ namespace DuckBots
             Drive();
             TraceAll();
 
-            // Раз в секунду — строка состояния про каждого бота в подробный журнал:
-            // что он видит и почему делает то, что делает, даже если режим не менялся.
             if (bots.Count > 0 && Level.current is GameLevel && ++_brainFrames >= 60)
             {
                 _brainFrames = 0;
@@ -102,16 +88,9 @@ namespace DuckBots
             }
         }
 
-        // --- консоль ---
-
         private static bool _commandsAdded;
 
-        // Команда консоли (клавиша ~) «nextround» — закончить текущую карту и перейти
-        // к следующей, тем же путём, что и сама игра (GameMode.Skip). Нужна на случай,
-        // когда боты где-то застряли и раунд не кончается: раньше приходилось выходить
-        // из матча целиком. Своя, а не встроенная: как та называется в ванили и не
-        // заперта ли за читами, по строкам игры не понять, а своя работает точно.
-        // Добавляется в первом кадре, когда консоль игры уже поднята.
+        // В первом кадре, когда консоль игры уже поднята. nextround идёт тем же путём, что игра (GameMode.Skip).
         private static void AddCommands()
         {
             _commandsAdded = true;
@@ -127,10 +106,6 @@ namespace DuckBots
                     Log("мод: раунд пропущен командой nextround");
                     GameMode.Skip();
                 }));
-                // «botlog» — полный журнал: самописец всех уток пишется в подробный
-                // файл непрерывно, кадр за кадром. Включать на той карте, где бот
-                // тупит: без события запись иначе остаётся в памяти.
-                // «botdebug» — подписи режимов над ботами и подробный журнал (см. debug).
                 DevConsole.AddCommand(new CMD("botdebug", () =>
                 {
                     SetDebug(!debug);
@@ -138,7 +113,7 @@ namespace DuckBots
                 }));
                 DevConsole.AddCommand(new CMD("botlog", () =>
                 {
-                    if (!fullLog && !debug) SetDebug(true);   // без подробного журнала писать некуда
+                    if (!fullLog && !debug) SetDebug(true);
                     fullLog = !fullLog;
                     Log("мод: полный журнал " + (fullLog
                         ? "включён — каждый кадр каждой утки идёт в botlog-detail.txt"
@@ -151,8 +126,6 @@ namespace DuckBots
                 Log("мод: консольные команды добавить не вышло: " + e.Message);
             }
         }
-
-        // --- нажатие кнопок ---
 
         private static void Drive()
         {
@@ -175,9 +148,6 @@ namespace DuckBots
 
                     if (d != null && lobby != null)
                     {
-                        // Готовность — утка в портале. Туда бот выходит вслед за
-                        // человеком и выходит обратно вместе с ним, иначе отсчёт до
-                        // матча начался бы без человека (BotManager.Beam).
                         m = LobbyStep(b, d, lobby, humanReady);
                     }
                     else if (d != null && !d.dead && Level.current is GameLevel)
@@ -190,10 +160,8 @@ namespace DuckBots
                     else if (Level.current is HighlightLevel || Level.current is HighlightPlayback
                         || Level.current is RockScoreboard)
                     {
-                        // Хайлайты и табло пропускаются голосованием: нужен START от всех
-                        // участников, ботов тоже. Бот жмёт его в тот же кадр, что и человек:
-                        // табло принимает голоса, только когда в этом кадре START нажал живой
-                        // игрок, а Tick идёт до обновления уровня, так что кадр общий.
+                        // Пропуск хайлайтов и табло — голосованием START, и голоса табло считает только
+                        // в кадр, когда START нажал живой игрок. Tick идёт до обновления уровня: кадр общий.
                         if (Input.Pressed("START", "Any")) m = BotInput.START;
                     }
                 }
@@ -202,20 +170,14 @@ namespace DuckBots
             }
         }
 
-        private const int IdleFrames = 180;   // три секунды без единой кнопки — бездействие
+        private const int IdleFrames = 180;
 
-        // Журнал решений. Смена режима — строка в основной журнал: из какого в какой,
-        // почему и на каких числах. Бездействие — бот жив, не обездвижен, а три
-        // секунды не жмёт ни одной кнопки: строка и запись самописца.
         private static void Explain(Bot b, Duck d, ushort m)
         {
-            // Начало уклонения — строка: как часто боты ложатся под прицелом и от кого.
             bool dodging = b.state.how == BotBrain.HowDodge || b.state.how == BotBrain.HowDodgeRun;
             if (dodging && !b.dodging)
                 Log(BotName(b) + ": ухожу подкатом, стрелок " + (int)b.view.threatDx + " — " + Context(b, d));
             b.dodging = dodging;
-            // Выстрел из гранатомёта (SHOOT отпущен, пока ствол поднимался) — строка: на
-            // каком угле отпустил, какой был нужен (−1 — дуги уже нет) и где враг.
             if (b.view.lobber && b.view.lobAiming && (m & BotInput.SHOOT) == 0)
                 Log(BotName(b) + ": граната навесом угол=" + (int)b.view.lobAim + " нужен=" + b.view.lobAngle
                     + " " + Context(b, d));
@@ -225,7 +187,7 @@ namespace DuckBots
                     + "→" + BotBrain.modeNames[b.state.mode] + " " + Context(b, d) + " — " + Reason(b.state));
                 b.lastMode = b.state.mode;
             }
-            // Без врагов и целей стоять не зазорно — это конец раунда.
+            // Без врагов и целей стоять можно: это конец раунда.
             if (m != 0 || d.immobilized || !(b.view.hasEnemy || b.view.hasPickup)) { b.idleFrames = 0; return; }
             if (++b.idleFrames != IdleFrames) return;
             Log(BotName(b) + ": бездействие 3с " + Context(b, d) + " — " + Reason(b.state) + " запись=f" + frame);

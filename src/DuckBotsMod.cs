@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Text;
 using DuckGame;
 using HarmonyLib;
 
@@ -16,20 +14,14 @@ namespace DuckBots
 
         protected override void OnPreInitialize()
         {
-            // Игра грузит мод через Assembly.Load(byte[]) и не ищет соседние DLL сама,
-            // поэтому 0Harmony.dll рядом с модом надо разрешать вручную.
             _dir = configuration.directory;
-            // Всё, что мод пишет на ходу, — журналы, bots.txt, debug.txt — живёт не в
-            // папке мода: в Workshop уходит вся она, и подписчики получили бы чужие
-            // журналы и чужой выбор ботов, а у них самих мод лежит в папке Steam.
+            // Писать в папку мода нельзя: в Workshop уходит вся она.
             string data = DataDirectory();
             BotManager.OpenLogs(data);
             BotSettings.Load(Path.Combine(data, "bots.txt"));
             AppDomain.CurrentDomain.AssemblyResolve += ResolveLocal;
         }
 
-        // %APPDATA%\DuckGame\DuckBots-data — рядом с Mods, в папке сохранений игры.
-        // Не вышло — в папку мода, как раньше: журнал важнее чистоты папки.
         private static string DataDirectory()
         {
             try
@@ -44,6 +36,7 @@ namespace DuckBots
             }
         }
 
+        // Игра грузит мод через Assembly.Load(byte[]) и соседние DLL не ищет: 0Harmony.dll — отсюда.
         private static Assembly ResolveLocal(object sender, ResolveEventArgs args)
         {
             string simpleName = new AssemblyName(args.Name).Name;
@@ -54,19 +47,16 @@ namespace DuckBots
 
         protected override void OnPostInitialize()
         {
-            // Мозг — чистая функция, и проверить его можно до всякой игры: дешевле,
-            // чем ловить поломку глазами посреди матча.
             string fail = BotBrain.SelfTest();
             BotManager.Log(fail == null
                 ? "мод: самопроверка мозга ок"
                 : "мод: САМОПРОВЕРКА МОЗГА УПАЛА — " + fail);
             ApplyPatches();
-            BotManager.hideFromHash = this; // подмена отпечатка — в первом кадре, см. там
+            BotManager.hideFromHash = this;   // подмена отпечатка — в первом кадре
             BotManager.FlushLogs();
         }
 
-        // Отдельный метод: типы Harmony разрешаются при JIT-компиляции метода,
-        // а он вызывается уже после того, как обработчик AssemblyResolve повешен.
+        // Отдельный метод: типы Harmony разрешаются при JIT метода, уже после AssemblyResolve.
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static void ApplyPatches()
         {
@@ -97,9 +87,7 @@ namespace DuckBots
         }
     }
 
-    // Тип смерти игра передаёт только сюда: DTFall — падение, DTShot — пуля или
-    // осколки, DTImpale — шипы и пилы, DTIncinerate — огонь. Postfix ничего не
-    // меняет в игре, только запоминает причину для журнала.
+    // Тип смерти игра передаёт только сюда. Postfix лишь запоминает его для журнала.
     [HarmonyPatch(typeof(Duck), "Kill")]
     public static class DuckKillPatch
     {
@@ -111,14 +99,12 @@ namespace DuckBots
             }
             catch (Exception)
             {
-                // Журнал не должен ронять смерть утки.
             }
         }
     }
 
     // Хостя, игра сажает локальными игроками всех из списка, собранного при уходе в сеть.
-    // Ботов из него вычёркиваем до этого и сажаем сами; в гостях список не трогаем — так
-    // боты и приходят с нами (BotManager.DropBotsFromMatchmaking).
+    // Ботов оттуда вычёркиваем и сажаем сами; в гостях список не трогаем — так боты приходят с нами.
     [HarmonyPatch(typeof(DuckNetwork), "Host")]
     public static class MatchmakingPatch
     {
@@ -135,8 +121,7 @@ namespace DuckBots
         }
     }
 
-    // Клиент отправляет хосту список своих игроков здесь. Не по приглашению — ботов
-    // из списка вычёркиваем (BotManager.BotsOnlyForFriends).
+    // Здесь клиент отправляет хосту список своих игроков.
     [HarmonyPatch(typeof(DuckNetwork), "SendJoinMessage")]
     public static class JoinPatch
     {
@@ -153,8 +138,7 @@ namespace DuckBots
         }
     }
 
-    // Меню паузы лобби игра пересобирает целиком при каждом открытии,
-    // поэтому пункт добавляем здесь, а не один раз при старте.
+    // Меню паузы лобби игра пересобирает при каждом открытии.
     [HarmonyPatch(typeof(TeamSelect2), "BuildPauseMenu")]
     public static class PauseMenuPatch
     {
@@ -170,7 +154,6 @@ namespace DuckBots
             }
             catch (Exception e)
             {
-                // Падение здесь уронило бы всю паузу, а не только наш пункт.
                 BotManager.Log("меню ботов не собралось: " + e);
             }
         }
@@ -201,14 +184,12 @@ namespace DuckBots
             column.leftSection.Add(new UIMenuItem("BOTS",
                 new UIMenuActionOpenMenu(pauseMenu, botsMenu)), true);
 
-            // Игра в конце BuildPauseMenu трижды прогоняет группу, чтобы посчитались
-            // размеры. Мы добавились после этих прогонов — повторяем за ней.
+            // Игра в конце BuildPauseMenu трижды прогоняет группу, чтобы посчитались размеры.
             pauseGroup.Update();
             pauseGroup.Update();
             pauseGroup.Update();
         }
 
-        // Подменю BOTS: семь строк OFF/DUCKLING/…, BACK возвращает в меню back.
         // Кладётся закрытым в ту же группу, что и back, — иначе переход не откроется.
         public static UIMenu BotsMenu(UIMenu back, UIComponent group)
         {
@@ -235,8 +216,6 @@ namespace DuckBots
             return section == null ? null : section.components;
         }
 
-        // В меню паузы лобби единственный ребёнок секции — UIDivider:
-        // слева колонка пунктов, справа картинка.
         private static UIDivider FindColumn(UIMenu menu)
         {
             IList<UIComponent> parts = Section(menu);
@@ -248,12 +227,8 @@ namespace DuckBots
         }
     }
 
-    // В сети пауза — другое меню: «MULTIPLAYER» собирает DuckNetwork.OpenMenu в свою
-    // группу при каждом открытии, BuildPauseMenu лобби тут ни при чём. Всё только хосту:
-    // в лобби — BOTS (ботов в сети сажает хост, BotManager.SyncSlotsOnline), в матче —
-    // SKIP, которого у хоста в ванили нет, а застрявших ботов иначе не прервать (это та
-    // же GameMode.Skip, что и консольная nextround). Меню к этому моменту уже открыто;
-    // Insert помечает его грязным, и раскладка пересчитается сама.
+    // В сети пауза — другое меню, его собирает DuckNetwork.OpenMenu. Только хосту: в лобби — BOTS,
+    // в матче — SKIP, которого у хоста в ванили нет. Insert помечает меню грязным, раскладка пересчитается.
     [HarmonyPatch(typeof(DuckNetwork), "OpenMenu")]
     public static class NetPauseMenuPatch
     {
@@ -287,7 +262,6 @@ namespace DuckBots
             if (lobby)
             {
                 UIMenu botsMenu = PauseMenuPatch.BotsMenu(menu, group);
-                // Рядом со своими: после EDIT SLOTS.
                 Place(menu, new UIMenuItem("|DGBLUE|BOTS", new UIMenuActionOpenMenu(menu, botsMenu), UIAlign.Left),
                       ItemIndex(menu, "EDIT SLOTS") + 1);
             }
@@ -305,7 +279,6 @@ namespace DuckBots
             GameMode.Skip();
         }
 
-        // Номер пункта, в тексте которого есть label, или −1.
         private static int ItemIndex(UIMenu menu, string label)
         {
             IList<UIComponent> parts = PauseMenuPatch.Section(menu);
@@ -317,7 +290,7 @@ namespace DuckBots
             return -1;
         }
 
-        // На место at, а если соседа не нашли (at < 0, или после −1 — ноль) — в конец.
+        // Соседа не нашли (at ≤ 0) — в конец.
         private static void Place(UIMenu menu, UIMenuItem item, int at)
         {
             if (at <= 0) menu.Add(item, true);
@@ -325,8 +298,6 @@ namespace DuckBots
         }
     }
 
-    // Подпись над ботом: в бою сразу видно, почему он ведёт себя именно так.
-    // Лог отвечает на вопрос «что было», подпись — на вопрос «что он думает прямо сейчас».
     [HarmonyPatch(typeof(Duck), "Draw")]
     public static class DuckDrawPatch
     {
@@ -342,7 +313,6 @@ namespace DuckBots
             }
             catch (Exception)
             {
-                // Падение в отрисовке уронило бы кадр целиком, а это всего лишь подпись.
             }
         }
     }
