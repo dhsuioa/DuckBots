@@ -90,16 +90,6 @@ namespace DuckBots
             LogPath(b, me, start, goal, to);
         }
 
-        // Ноль — идти к самому врагу: холодное бьёт в упор, пустыми руками стрелять нечем.
-        private static float FireRange(Duck me)
-        {
-            Gun g = me.holdObject as Gun;
-            if (g == null || !Usable(g) || IsMelee(g)) return 0f;
-            if (g is Grenade || g is Mine) return BotBrain.ThrowRange - 6f;
-            if (g is NetGun) return 112f;   // сетка летит дугой и к 150 px опускается ниже ствола
-            return GunReach(g) - 22f;
-        }
-
         private struct Candidate
         {
             public Thing thing;
