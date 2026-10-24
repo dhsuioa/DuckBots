@@ -203,8 +203,7 @@ namespace DuckBots
             while (same < n && same < b.pathLen && _pathBuf[same] == b.path[same]) same++;
             if (same == n && n == b.pathLen) return;
 
-            int col = (int)Math.Floor((me.x - _nav.originX) / NavCell);
-            int row = (int)Math.Floor((me.bottom - 4f - _nav.originY) / NavCell);
+            int col = _nav.Col(me.x), row = _nav.Row(me.bottom - 4f);
             bool own = _nav.CellCol(start) == col && _nav.CellRow(start) == row;
             StringBuilder sb = new StringBuilder();
             sb.Append(BotName(b)).Append(": маршрут к=").Append(to).Append(" узлов=").Append(n)

@@ -97,8 +97,7 @@ namespace DuckBots
             {
                 Mine mine = t as Mine;
                 if (mine == null || mine._pin || mine.owner != null || mine.removeFromLevel) continue;
-                int mx = (int)Math.Floor((mine.x - tl.x) / NavCell);
-                int my = (int)Math.Floor((mine.y - oy) / NavCell);
+                int mx = NavMap.CellOf(mine.x, tl.x, NavCell), my = NavMap.CellOf(mine.y, oy, NavCell);
                 if (mx >= 0 && my >= 0 && mx < w && my < h) cells[my * w + mx] = NavMap.Deadly;
             }
 
@@ -112,8 +111,8 @@ namespace DuckBots
                 if (win == null || win.floor || win.bars.value || win.destroyed || win.removeFromLevel) continue;
                 panes++;
                 bool seen = true;
-                int x0 = (int)Math.Floor((win.left - tl.x) / NavCell), x1 = (int)Math.Floor((win.right - 1f - tl.x) / NavCell);
-                int y0 = (int)Math.Floor((win.top - oy) / NavCell), y1 = (int)Math.Floor((win.bottom - 1f - oy) / NavCell);
+                int x0 = NavMap.CellOf(win.left, tl.x, NavCell), x1 = NavMap.CellOf(win.right - 1f, tl.x, NavCell);
+                int y0 = NavMap.CellOf(win.top, oy, NavCell), y1 = NavMap.CellOf(win.bottom - 1f, oy, NavCell);
                 for (int gy = y0; gy <= y1; gy++)
                     for (int gx = x0; gx <= x1; gx++)
                     {
@@ -211,8 +210,7 @@ namespace DuckBots
                 {
                     if (++n > 30) { sb.Append(" …"); break; }
                     sb.Append(' ').Append(t.GetType().Name).Append(' ')
-                        .Append((int)Math.Floor((t.x - nav.originX) / NavCell)).Append(',')
-                        .Append((int)Math.Floor((t.y - nav.originY) / NavCell));
+                        .Append(nav.Col(t.x)).Append(',').Append(nav.Row(t.y));
                     Door door = t as Door;
                     if (door != null && door.locked) sb.Append(" заперта");
                     Block b = t as Block;

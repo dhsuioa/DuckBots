@@ -66,9 +66,6 @@ namespace DuckBots
             return p.ToArray();
         }
 
-        private int Col(float wx) { return (int)Math.Floor((wx - _originX) / _cell); }
-        private int Row(float wy) { return (int)Math.Floor((wy - _originY) / _cell); }
-
         private bool SolidIn(int cx, float top, float bottom)
         {
             for (int cy = Row(top); cy <= Row(bottom); cy++)
@@ -134,7 +131,7 @@ namespace DuckBots
                         d.vs = 0f;
                         d.grounded = true;
                         frames = f + 1;
-                        return Landing(d.x, d.bottom);
+                        return NodeUnderDuck(d.x, d.bottom);
                     }
                 }
                 else if (d.vs < 0f)
@@ -167,7 +164,7 @@ namespace DuckBots
         private static bool Support(byte c) { return c == Solid || c == Platform; }
 
         // Узел под севшей уткой: центр бывает над пустотой, а стоит она краем бокса на соседней клетке.
-        private int Landing(float x, float bottom)
+        private int NodeUnderDuck(float x, float bottom)
         {
             int row = Row(bottom - 4f);
             int node = NodeAt(Col(x), row);

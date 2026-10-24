@@ -87,8 +87,7 @@ namespace DuckBots
             // Прыжок по программе — из центра узла, откуда считан маршрут: тормозя, бот проскакивает в соседнюю клетку.
             if (!float.IsNaN(b.routeStartX)) v.alignDx = b.routeStartX - me.x;
             else if (_nav != null)
-                v.alignDx = (float)Math.Floor((me.x - _nav.originX) / NavCell) * NavCell
-                    + _nav.originX + NavCell / 2f - me.x;
+                v.alignDx = _nav.Col(me.x) * NavCell + _nav.originX + NavCell / 2f - me.x;
 
             // Обрывы с обеих сторон: направление выбирает Decide. Без карты любой обрыв — пропасть.
             if (me.grounded)

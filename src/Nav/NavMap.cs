@@ -156,8 +156,12 @@ namespace DuckBots
             return _glass != null && x >= 0 && y >= 0 && x < _w && y < _h && _glass[y * _w + x];
         }
 
+        public static int CellOf(float world, float origin, float cell) { return (int)Math.Floor((world - origin) / cell); }
+        public int Col(float wx) { return CellOf(wx, _originX, _cell); }
+        public int Row(float wy) { return CellOf(wy, _originY, _cell); }
+
         // Где встанет утка, вошедшая в столбец x на высоте y; −1 — стена или смерть по дороге.
-        private int Landing(int x, int y)
+        private int LandingBelow(int x, int y)
         {
             for (int cy = y; cy < _h; cy++)
             {
@@ -191,6 +195,15 @@ namespace DuckBots
             return true;
         }
 
+        // Сосед в общий буфер _nb: возвращает новую длину.
+        private int Add(int n, int node, int edge)
+        {
+            _nb[n] = node;
+            _nbEdge[n] = edge;
+            _nbProg[n] = 0;
+            return n + 1;
+        }
+
         private int Edges(int node)
         {
             int[] adj = _adj[node], kind = _adjEdge[node];
@@ -200,8 +213,8 @@ namespace DuckBots
             Array.Copy(_adjProg[node], _nbProg, n);
             for (int i = 0; i < _links && n < _nb.Length; i++)
             {
-                if (_linkFrom[i] == node) { _nb[n] = _linkTo[i]; _nbEdge[n] = Walk; _nbProg[n] = 0; n++; }
-                else if (_linkTo[i] == node) { _nb[n] = _linkFrom[i]; _nbEdge[n] = Walk; _nbProg[n] = 0; n++; }
+                if (_linkFrom[i] == node) n = Add(n, _linkTo[i], Walk);
+                else if (_linkTo[i] == node) n = Add(n, _linkFrom[i], Walk);
             }
             return n;
         }
@@ -215,34 +228,27 @@ namespace DuckBots
 
             // Встал на пружину — дальше решает она: из такой клетки растут только полёты.
             byte spring = SpringAt(x, y);
-            if (spring != Empty)
-            {
-                n += Launches(spring, x, y, n);
-                return n;
-            }
+            if (spring != Empty) return Launches(spring, x, y, n);
 
             for (int d = -1; d <= 1; d += 2)
             {
                 int side = NodeAt(x + d, y);
-                if (side >= 0) { _nb[n] = side; _nbEdge[n] = Walk; _nbProg[n] = 0; n++; }
-                else if (IsSpring(At(x + d, y)) && NodeAt(x + d, y - 1) >= 0)
-                {
-                    _nb[n] = NodeAt(x + d, y - 1); _nbEdge[n] = Walk; _nbProg[n] = 0; n++;
-                }
+                if (side >= 0) n = Add(n, side, Walk);
+                else if (IsSpring(At(x + d, y)) && NodeAt(x + d, y - 1) >= 0) n = Add(n, NodeAt(x + d, y - 1), Walk);
                 else if (At(x + d, y) == Empty)
                 {
                     for (int cy = y + 1; cy < _h; cy++)
                     {
                         if (At(x + d, cy) == Solid) break;
                         int landed = NodeAt(x + d, cy);
-                        if (landed >= 0) { _nb[n] = landed; _nbEdge[n] = Walk; _nbProg[n] = 0; n++; break; }
+                        if (landed >= 0) { n = Add(n, landed, Walk); break; }
                     }
                 }
                 else if (IsGlass(x + d, y) && (IsGlass(x + d, y - 1) || At(x + d, y - 1) != Solid))
                 {
                     // Ребро «стекло» ведёт туда, где утка встанет за проёмом.
-                    int beyond = Landing(x + 2 * d, y);
-                    if (beyond >= 0) { _nb[n] = beyond; _nbEdge[n] = Smash; _nbProg[n] = 0; n++; }
+                    int beyond = LandingBelow(x + 2 * d, y);
+                    if (beyond >= 0) n = Add(n, beyond, Smash);
                 }
             }
 
@@ -251,7 +257,7 @@ namespace DuckBots
                 {
                     if (At(x, cy) == Solid) break;
                     int landed = NodeAt(x, cy);
-                    if (landed >= 0) { _nb[n] = landed; _nbEdge[n] = Drop; _nbProg[n] = 0; n++; break; }
+                    if (landed >= 0) { n = Add(n, landed, Drop); break; }
                 }
 
             // Каждая программа прыжка прогоняется физикой игры; в один узел остаётся та, что короче летит.
@@ -284,9 +290,8 @@ namespace DuckBots
         // ponytail: полёт от пружины — короб целей, а не баллистика: прямая бросает
         // вверх в обе стороны, боковая — вбок, диагональная — вверх в свою сторону.
         // SpringDown рёбер не даёт. Считать баллистику, если бот начнёт мимо них летать.
-        private int Launches(byte spring, int x, int y, int at)
+        private int Launches(byte spring, int x, int y, int n)
         {
-            int n = 0;
             int fromX = -LaunchSide, toX = LaunchSide, fromY = -LaunchRise, toY = 2;
             if (spring == SpringLeft) { toX = -1; fromY = -2; }
             else if (spring == SpringRight) { fromX = 1; fromY = -2; }
@@ -298,9 +303,8 @@ namespace DuckBots
                 {
                     if (dx == 0 && dy == 0) continue;
                     int target = NodeAt(x + dx, y + dy);
-                    if (target < 0 || at + n >= _nb.Length) continue;
-                    if (!ArcClear(x, y, x + dx, y + dy)) continue;
-                    _nb[at + n] = target; _nbEdge[at + n] = Launch; _nbProg[at + n] = 0; n++;
+                    if (target < 0 || n >= _nb.Length) continue;
+                    if (ArcClear(x, y, x + dx, y + dy)) n = Add(n, target, Launch);
                 }
             return n;
         }
@@ -333,8 +337,7 @@ namespace DuckBots
         // Узел строго под точкой — под ящик, который бьют снизу. Платформу прыжок пробивает, стену — нет.
         public int NodeBelow(float worldX, float worldY, int maxCells)
         {
-            int x = (int)Math.Floor((worldX - _originX) / _cell);
-            int y = (int)Math.Floor((worldY - _originY) / _cell);
+            int x = Col(worldX), y = Row(worldY);
             if (x < 0 || x >= _w) return -1;
             for (int cy = y + 1; cy <= y + maxCells && cy < _h; cy++)
             {
@@ -397,8 +400,7 @@ namespace DuckBots
         // до неё (ствол бьёт только горизонтально), ближайший по последнему поиску.
         public int FiringNode(float targetX, float targetFeetY, float minDx, float maxDx)
         {
-            int tx = (int)Math.Floor((targetX - _originX) / _cell);
-            int ty = (int)Math.Floor((targetFeetY - 4f - _originY) / _cell);
+            int tx = Col(targetX), ty = Row(targetFeetY - 4f);
             if (tx < 0 || tx >= _w || ty < 0 || ty >= _h) return -1;
             int best = -1;
             float bestLen = float.MaxValue;
@@ -419,8 +421,7 @@ namespace DuckBots
         // Есть ли под точкой куда упасть: первая непустая клетка вниз решает, низ карты — пропасть.
         public bool SafeBelow(float worldX, float worldY)
         {
-            int x = (int)Math.Floor((worldX - _originX) / _cell);
-            int y = (int)Math.Floor((worldY - _originY) / _cell);
+            int x = Col(worldX), y = Row(worldY);
             if (x < 0 || x >= _w) return false;
             for (int cy = y < 0 ? 0 : y; cy < _h; cy++)
             {
