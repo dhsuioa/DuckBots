@@ -27,8 +27,8 @@ namespace DuckBots
         // пружина перебивает пустоту, дверь перебивает стену.
         private static byte Classify(Vec2 p)
         {
-            // Шипы и пилы — не здесь, а отдельным проходом в EnsureNav: центр клетки в них
-            // не попадает.
+            if (Level.CheckPoint<Spikes>(p) != null) return NavMap.Deadly;
+            if (Level.CheckPoint<Saws>(p) != null) return NavMap.Deadly;
             Icicles ice = Level.CheckPoint<Icicles>(p);
             if (ice != null && ice.kill) return NavMap.Deadly;
             // Лава и вода — частицы Fluid, а не блоки. Воду смертельной считать
@@ -132,28 +132,6 @@ namespace DuckBots
                 if (mx >= 0 && my >= 0 && mx < w && my < h) cells[my * w + mx] = NavMap.Deadly;
             }
 
-            // Шипы и пилы — полоска в 4–5 пикселей у стены (бокс 13x5 и 12x4), а центр
-            // клетки от неё в трёх пикселях. Проверка по центру клетки их не видела: на
-            // forest15 и forest09_8 карта ставила узлы прямо на шипы, и прыжок карты туда
-            // садился — 22.10 боты гибли на шипах 9 раз за 163 раунда, человек ни разу.
-            // Редактор ставит опасность в центр тайла со сдвигом editorOffset к стене,
-            // так что центр тайла — position − editorOffset, в 8 пикселях от стены: при
-            // любом сдвиге сетки меньше восьми это клетка перед стеной, а не сама стена.
-            // ponytail: смерть — вся клетка, хотя убивают крайние 5 пикселей, а по шипам
-            // можно ходить (убивает только падение на них с vSpeed > 1); мерить бокс утки
-            // по самой полоске в Simulate, если граф на картах с шипами начнёт рваться.
-            int hazards = 0;
-            foreach (Type type in _hazards)
-                foreach (Thing t in Level.current.things[type])
-                {
-                    Vec2 c = t.position - t.editorOffset;
-                    int hx = (int)Math.Floor((c.x - tl.x) / NavCell);
-                    int hy = (int)Math.Floor((c.y - oy) / NavCell);
-                    if (hx < 0 || hy < 0 || hx >= w || hy >= h || cells[hy * w + hx] == NavMap.Solid) continue;
-                    cells[hy * w + hx] = NavMap.Deadly;
-                    hazards++;
-                }
-
             // Стекло. Вертикальное окно — стойка 6 пикселей в центре тайла, а сетка карты
             // сдвинута от тайлов на 0–5 пикселей: начало карты — левый край самой левой
             // вещи уровня. Центр клетки попадает в стекло только при сдвиге до трёх (так
@@ -215,17 +193,13 @@ namespace DuckBots
             {
                 _navReported = true;
                 Log("мир: карта проходимости " + w + "x" + h + " клеток, узлов " + nav.nodeCount
-                    + ", телепортов " + links + ", стёкол " + panes + ", из них мимо центров клеток " + unseen
-                    + ", шипов и пил " + hazards);
+                    + ", телепортов " + links + ", стёкол " + panes + ", из них мимо центров клеток " + unseen);
                 DumpMap(nav, "первая сборка");
                 Detail("карта: предметы:" + MapThings(nav));
             }
             else if (before != null && before.width == w && before.height == h)
                 LogMapChanges(before.cells, nav);
         }
-
-        // Подклассы (Down, Left, Right) игра кладёт и под базовый тип.
-        private static readonly Type[] _hazards = { typeof(Spikes), typeof(Saws) };
 
         private static bool SameCells(byte[] a, byte[] b)
         {
