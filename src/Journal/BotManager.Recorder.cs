@@ -1,27 +1,18 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
-using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Text;
 using DuckGame;
-using HarmonyLib;
 
 namespace DuckBots
 {
     public static partial class BotManager
     {
-        // --- самописец ---
-
+        // Порядок совпадает с битами BotInput: LEFT = 1, RIGHT = 2…
         private static readonly string[] _buttonNames =
             { "LEFT", "RIGHT", "UP", "DOWN", "SHOOT", "JUMP", "GRAB", "QUACK", "START", "RAGDOLL", "STRAFE" };
         private static readonly string[] _buttonLetters =
             { "L", "R", "U", "D", "S", "J", "G", "Q", "St", "Rg", "Sf" };
 
-        // Кадр в самописец. У бота кнопки — его маска, у игрока — то, что держит его
-        // контроллер; у бота вдобавок режим, причина и шаг маршрута. Порядок кнопок
-        // совпадает с битами BotInput: LEFT = 1, RIGHT = 2 и так далее.
         private static void Record(MoveTracer tr, Duck d)
         {
             RecFrame f = new RecFrame();
@@ -98,7 +89,6 @@ namespace DuckBots
         private static string F1(float x) { return x.ToString("0.0", CultureInfo.InvariantCulture); }
         private static string F2(float x) { return x.ToString("0.00", CultureInfo.InvariantCulture); }
 
-        // Запись самописца в подробный журнал: последние кадры до события.
         private static void Dump(MoveTracer tr, string why, int frames)
         {
             int n = Math.Min(frames, tr.recCount);
@@ -107,8 +97,7 @@ namespace DuckBots
                 Detail(tr.who + ": " + FrameLine(tr.rec[(tr.recHead - i + MoveTracer.RecLen) % MoveTracer.RecLen]));
         }
 
-        // Событие замечено в мозге, а кадр этого тика в самописец ещё не лёг:
-        // запись сбросит журнал в конце кадра.
+        // Кадр этого тика в самописец ещё не лёг: запись сбросит журнал в конце кадра.
         private static void RequestDump(Duck d, string why)
         {
             MoveTracer tr;

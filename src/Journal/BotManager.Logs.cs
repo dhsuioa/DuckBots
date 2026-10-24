@@ -1,36 +1,24 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Text;
 using DuckGame;
-using HarmonyLib;
 
 namespace DuckBots
 {
+    // Два журнала: основной (botlog.txt) — события и решения, подробный (botlog-detail.txt) —
+    // самописец, маршруты, карты. По f= строки обоих сводятся. Потоки открыты, сброс раз в кадр.
     public static partial class BotManager
     {
-        // --- два журнала ---
-        //
-        // Основной (botlog.txt) короткий: события, смены режима с причиной, выбор
-        // цели, сводки раундов. Подробный (botlog-detail.txt) — самописец, маршруты,
-        // кандидаты, карты, строка состояния раз в секунду. Каждая строка помечена
-        // временем, номером кадра и раунда: по f= строки обоих файлов сводятся в
-        // одну историю. Пишем через открытые потоки и сбрасываем раз в кадр: в полном
-        // режиме строк сотни в секунду, а File.AppendAllText открывал файл на каждую.
         public static int frame, round;
         public static bool fullLog;                   // команда botlog
-        private const long DetailCap = 64L << 20;     // байт: подробный журнал растёт быстро
+        private const long DetailCap = 64L << 20;
         private static StreamWriter _mainLog, _detailLog;
         private static long _detailBytes;
         private static string _detailPath;
 
-        // Отладка: подробный журнал, подписи режимов над утками и строки журнала в консоли
-        // игры. У игрока из Workshop её нет — подробный журнал дорастал до 64 МБ за вечер,
-        // а подписи загораживают игру. Включается файлом debug.txt в папке мода (так у
-        // разработки) или консольной командой botdebug.
+        // Отладка: подробный журнал, подписи режимов над утками и строки журнала в консоли. У игроков
+        // её нет. Включается файлом debug.txt в папке данных или командой botdebug.
         public static bool debug;
 
         public static void SetDebug(bool on)
@@ -48,9 +36,8 @@ namespace DuckBots
             string main = Path.Combine(dir, "botlog.txt"), detail = Path.Combine(dir, "botlog-detail.txt");
             _detailPath = detail;
             debug = File.Exists(Path.Combine(dir, "debug.txt"));
-            // Журналы прошлого матча не затирать: игру перезапускают после каждой сборки,
-            // и журнал матча 27.09 пропал, не дождавшись разбора. Пустой запуск (меньше
-            // 16 КБ) старую копию не трогает.
+            // Игру перезапускают после каждой сборки: прошлый матч — в *.prev.txt. Пустой запуск
+            // (меньше 16 КБ) старую копию не трогает.
             try
             {
                 if (File.Exists(main) && new FileInfo(main).Length > 16384)
@@ -72,7 +59,7 @@ namespace DuckBots
         {
             try
             {
-                // ReadWrite — чтобы журнал можно было читать, пока игра пишет.
+                // ReadWrite — журнал можно читать, пока игра пишет.
                 return new StreamWriter(new FileStream(path, FileMode.Create, FileAccess.Write,
                     FileShare.ReadWrite), new UTF8Encoding(false));
             }

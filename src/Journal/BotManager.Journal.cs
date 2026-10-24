@@ -1,19 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
 using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Text;
 using DuckGame;
-using HarmonyLib;
 
 namespace DuckBots
 {
     public static partial class BotManager
     {
-        // --- лог ---
-
         private static void DumpBots()
         {
             try
@@ -45,17 +38,10 @@ namespace DuckBots
             }
         }
 
-        // --- журнал движений ---
-        //
-        // Строка про бота пишется раз в секунду, а движение длится меньше, поэтому
-        // по ней не понять ни почему бот не запрыгнул, ни как ту же карту проходит
-        // человек. Журнал следит за каждой уткой от отрыва до приземления и пишет
-        // одну строку на движение: прыжок, сход с края, провал сквозь платформу,
-        // пружину, телепорт, подкат. Каждое движение сверяется с картой проходимости:
-        // «в графе НЕТ» у движения игрока — ровно то место, где бот видит пространство
-        // неправильно. Для игрока пишется всё, для ботов — промахи и смерти, иначе
-        // лог утонет. В конце раунда — сводка.
-
+        // Журнал движений: строка на каждое движение утки (прыжок, сход с края, провал сквозь
+        // платформу, пружина, телепорт, подкат), сверенное с картой. «В графе НЕТ» у движения
+        // человека — место, где бот видит карту неверно. У человека пишется всё, у ботов — промахи
+        // и смерти; в конце раунда — сводка.
         private static readonly Dictionary<Duck, MoveTracer> _tracers = new Dictionary<Duck, MoveTracer>();
         private static Level _traceLevel;
         private static int _roundStart;
@@ -67,8 +53,7 @@ namespace DuckBots
         {
             if (!(Level.current is GameLevel)) return;
 
-            // Взрыв: и граната, и мина создают ExplosionPart. Пишем начало вспышки —
-            // кадр, когда части появились после кадра без них.
+            // Начало взрыва — кадр, когда ExplosionPart появились после кадра без них.
             bool boom = false;
             foreach (Thing t in Level.current.things[typeof(ExplosionPart)])
             {
@@ -94,8 +79,7 @@ namespace DuckBots
                 try
                 {
                     Trace(tr);
-                    // Событие, замеченное в мозге (сторож, бездействие): запись
-                    // сбрасывается здесь, когда кадр уже лёг в самописец.
+                    // Событие из мозга сбрасывается здесь, когда кадр уже лёг в самописец.
                     if (tr.dumpWhy != null)
                     {
                         Dump(tr, tr.dumpWhy, MoveTracer.RecLen);
@@ -111,14 +95,11 @@ namespace DuckBots
             Duck d = tr.duck;
             if (d.dead)
             {
-                // Сначала строка смерти, потом сброс полёта. Раньше полёт сбрасывался
-                // первым, и ни одна смерть не была помечена «в полёте».
-                if (!tr.dead) { tr.dead = true; LogDeath(tr); tr.air = false; }
+                if (!tr.dead) { tr.dead = true; LogDeath(tr); tr.air = false; }   // строка смерти пишет «полёт»
                 return;
             }
 
-            // Рэгдолл: тело живёт в Ragdoll, а объект утки игра уносит на 5000
-            // пикселей вверх (GoRagdoll). Ни полёт, ни телепорт по нему не считаются.
+            // В рэгдолле объект утки унесён на 5000 px вверх: ни полёт, ни телепорт по нему не считаются.
             bool doll = d.ragdoll != null;
             if (doll != tr.ragdoll)
             {
@@ -135,7 +116,7 @@ namespace DuckBots
             bool jumpDown = ip != null && ip.Down("JUMP");
             bool downDown = ip != null && ip.Down("DOWN");
 
-            // Телепорт: утка за один кадр оказалась далеко, а скорость это не объясняет.
+            // Телепорт: за кадр далеко, а скорость этого не объясняет.
             if (tr.seen)
             {
                 float jump = Math.Abs(d.x - tr.lastX) + Math.Abs(d.y - tr.lastY);
@@ -145,19 +126,16 @@ namespace DuckBots
                     Log(tr.who + ": телепорт из " + (int)tr.lastX + "," + (int)tr.lastY
                         + " в " + (int)d.x + "," + (int)d.y + " — "
                         + GraphWord(tr.lastX, tr.lastBottom - 4f, d.x, d.bottom - 4f));
-                    tr.air = false;   // полёт до телепорта с полётом после не сравнить
+                    tr.air = false;
                 }
             }
 
             TraceHands(tr, d);
-            // Подкаты ботов пишутся так же, как у человека: по ним видно, разбил ли
-            // бот стекло и как быстро шёл.
             TraceSlide(tr, d);
 
             if (!tr.air)
             {
-                // Только с земли: иначе падение на место спавна в начале раунда
-                // записалось бы как сход с края.
+                // Только с земли: иначе падение на спавн записалось бы сходом с края.
                 if (tr.lastGrounded && !d.grounded) StartAir(tr, d, jumpDown || tr.lastJumpDown, downDown);
             }
             else
@@ -167,7 +145,7 @@ namespace DuckBots
                 if (jumpDown && d.vSpeed < 0f) tr.jumpHeld++;
                 if (!tr.throughPlatform && d.vSpeed < 0f && PlatformAt(d.position)) tr.throughPlatform = true;
                 if (d.grounded) EndAir(tr, d);
-                else if (tr.airFrames > 400) tr.air = false;   // висит на лиане или в воде — не полёт
+                else if (tr.airFrames > 400) tr.air = false;   // лиана или вода — не полёт
             }
 
             tr.seen = true;
@@ -188,7 +166,7 @@ namespace DuckBots
             tr.air = true;
             tr.airFrames = 0;
             tr.jumpHeld = jumpPressed ? 1 : 0;
-            // Отрыв замечен уже в полёте, поэтому точка отрыва — прошлый кадр.
+            // Отрыв замечен уже в полёте: точка отрыва — прошлый кадр.
             tr.fromX = tr.lastX;
             tr.fromY = tr.lastBottom;
             tr.apexY = Math.Min(tr.lastBottom, d.bottom);
@@ -197,18 +175,13 @@ namespace DuckBots
             tr.downHeld = downHeld;
             tr.throughPlatform = false;
 
-            // Бот: что он делал при отрыве и куда целился, если прыжок начало ребро
-            // маршрута. Только такой прыжок считается маршрутным: раньше сюда попадали
-            // и прыжки от застревания, и бегство от мины в стену — 34 «промаха»
-            // на forest10_8 были именно такими.
             tr.routed = false;
             tr.startHow = null;
             Bot b = tr.bot;
             if (b != null)
             {
-                // Что бот делал в кадре отрыва — в самописце он предпоследний: последний
-                // уже записан в полёте, где мозг решает заново и пишет «на месте».
-                // Так провал сквозь платформу выглядел в журнале как падение с места.
+                // Кадр отрыва в самописце предпоследний: в последнем бот уже в полёте и решает заново.
+                // Маршрутным считается только прыжок, начатый ребром маршрута.
                 string how = tr.recCount >= 2
                     ? tr.rec[(tr.recHead - 2 + MoveTracer.RecLen) % MoveTracer.RecLen].how : b.state.how;
                 bool jumping = b.state.jumpHold > 0 || b.state.progAt > 0;
@@ -217,29 +190,27 @@ namespace DuckBots
                 {
                     tr.routed = true;
                     tr.routeToX = tr.lastX + b.state.jumpDX;
-                    // Узел — центр клетки, а стоять утка будет на её нижнем краю.
-                    tr.routeToY = tr.lastY + b.state.jumpDY + NavCell / 2f;
+                    tr.routeToY = tr.lastY + b.state.jumpDY + NavCell / 2f;   // узел — центр клетки, утка стоит на её низе
                     tr.routeEdge = NavMap.Jump;
                     tr.routeProg = b.state.progAt > 0 ? b.state.prog : 0;
                 }
             }
         }
 
-        // Что это было, по тому, как утка оторвалась от земли.
         private static string AirKind(MoveTracer tr)
         {
-            if (tr.startVSpeed < -8f) return "пружина";           // прыжок даёт -4.9, пружина -22
+            if (tr.startVSpeed < -8f) return "пружина";   // прыжок даёт −4.9, пружина −22
             if (tr.jumpPressed && tr.startVSpeed < 0f) return "прыжок";
             if (tr.downHeld) return "провал сквозь платформу";
             if (tr.startVSpeed >= -0.5f) return "сход с края";
-            return "подброс";                                       // взрыв, отдача, чужой удар
+            return "подброс";
         }
 
         private static void EndAir(MoveTracer tr, Duck d)
         {
             tr.air = false;
-            float up = tr.fromY - tr.apexY;       // на сколько поднялась в полёте
-            float rise = tr.fromY - d.bottom;     // итог: плюс — села выше, минус — ниже
+            float up = tr.fromY - tr.apexY;
+            float rise = tr.fromY - d.bottom;
             float side = d.x - tr.fromX;
             string kind = AirKind(tr);
 
@@ -250,9 +221,7 @@ namespace DuckBots
                     Log(tr.who + ": пружина из " + (int)tr.fromX + "," + (int)tr.fromY
                         + " в " + (int)d.x + "," + (int)d.bottom);
                 LogBotMiss(tr, d, up);
-                // Падение: полёт начат не своим прыжком, а сходом с края или
-                // подбросом, и кончился заметно ниже. Само по себе не смертельно, но
-                // показывает, где бот сорвался; если его туда вёл маршрут — это спуск.
+                // Падение — не свой прыжок, а сход или подброс, и заметно ниже; по маршруту это спуск.
                 if ((kind == "сход с края" || kind == "подброс") && -rise > 48f)
                 {
                     bool meant = tr.startHow == BotBrain.HowRoute || tr.startHow == BotBrain.HowRouteDrop
@@ -269,7 +238,6 @@ namespace DuckBots
                 return;
             }
 
-            // Подпрыгнул на месте на пару пикселей — не движение, а шум.
             if (tr.airFrames < 4 && Math.Abs(rise) < 8f && Math.Abs(side) < 8f) return;
 
             int edge = NavMap.Walk;
@@ -288,14 +256,12 @@ namespace DuckBots
             Log(line);
         }
 
-        // Промах бота: прыжок, начатый ребром маршрута, кончился не в том узле — ни
-        // по высоте, ни вбок. Сюда попадает и прыжок на месте, которого раньше журнал
-        // не замечал. По числам видно, чего не хватило, по записи — как это вышло.
+        // Промах: прыжок ребра маршрута кончился не в том узле.
         private static void LogBotMiss(MoveTracer tr, Duck d, float up)
         {
             if (!tr.routed) return;
-            float missX = d.x - tr.routeToX;       // плюс — сел правее цели
-            float missY = d.bottom - tr.routeToY;  // плюс — сел ниже цели
+            float missX = d.x - tr.routeToX;
+            float missY = d.bottom - tr.routeToY;
             if (Math.Abs(missX) <= 12f && Math.Abs(missY) <= 8f) return;
             _botMisses++;
             Log(tr.who + ": промах ребро=" + EdgeName(tr.routeEdge)
@@ -334,8 +300,6 @@ namespace DuckBots
             return "вне графа";
         }
 
-        // Что игрок взял и что бросил. Смена предмета в руках — это и подбор,
-        // и бросок, и выбитый из рук ствол.
         private static void TraceHands(MoveTracer tr, Duck d)
         {
             Holdable now = d.holdObject;
@@ -351,7 +315,6 @@ namespace DuckBots
             tr.held = now;
         }
 
-        // Подкат: сколько длился, как быстро, разбил ли стекло рядом.
         private static void TraceSlide(MoveTracer tr, Duck d)
         {
             if (d.sliding)
@@ -377,11 +340,8 @@ namespace DuckBots
                 + " в " + (int)d.x + "," + (int)d.y);
         }
 
-        // Смерть с настоящей причиной. Тип смерти игра передаёт в Duck.Kill (его ловит
-        // DuckKillPatch), а где и как утка погибла — берём из самописца: объект мёртвой
-        // утки игра уже унесла на 5000 пикселей вверх (GoRagdoll), а упавшую перед
-        // этим ещё и на 500 вниз. Поэтому прежняя проверка «упал за край» на падениях
-        // молчала, и 80 смертей 24.09 записались как «причина неясна».
+        // Тип смерти — из Duck.Kill, место — из самописца: объект мёртвой утки игра уже унесла
+        // на 5000 px вверх, а упавшую перед этим ещё и на 500 вниз.
         private static void LogDeath(MoveTracer tr)
         {
             Duck d = tr.duck;
@@ -412,7 +372,6 @@ namespace DuckBots
             }
         }
 
-        // Чем убита утка. Кто — responsibleProfile, чем — тип смерти и то, что убило.
         private static string Cause(DestroyType t, Duck d, out string by)
         {
             by = null;
@@ -424,12 +383,10 @@ namespace DuckBots
             if (shot != null)
             {
                 Thing from = shot.bulletFiredFrom;
-                // Осколки гранаты из гранатомёта выпускает сама граната (GrenadeBullet), и
-                // владельца у них нет: ствол и стрелок — дальше по цепочке.
+                // У осколков владельца нет: их выпускает сама граната, стрелок — дальше по цепочке.
                 Thing src = Origin(from);
                 if (by == null) by = OwnerOf(src, d);
                 string gun = src == null ? "?" : src.GetType().Name;
-                // Осколки гранаты и мины — тоже пули, выпущенные ими самими.
                 if (from is Grenade || from is Mine || from is Bullet) return "взрыв:" + gun;
                 Bullet bullet = shot.bullet;
                 return "пуля:" + gun + "/"
@@ -439,8 +396,7 @@ namespace DuckBots
             if (t is DTImpale) return "насадился" + what;
             if (t is DTIncinerate)
             {
-                // Огонь выпускают огнемёт и вспышка ракетницы, и владельца нет ни у огня,
-                // ни у вспышки: до 22.10 все 13 смертей от них записаны без «кто».
+                // Владельца нет ни у огня, ни у вспышки.
                 Thing src = Origin(t.thing);
                 if (by == null) by = OwnerOf(src, d);
                 return "огонь" + what + (src != null && src != t.thing ? "/" + src.GetType().Name : "");
@@ -452,10 +408,10 @@ namespace DuckBots
             return t.GetType().Name + what;
         }
 
-        // Чем выпущено то, что убило: осколок — гранатой, граната — гранатомётом, огонь —
-        // огнемётом или вспышкой, вспышка — ракетницей (её приватное Flare._owner).
         private static FieldInfo _flareOwner;
 
+        // Чем выпущено: осколок — гранатой, граната — гранатомётом, огонь — огнемётом или вспышкой,
+        // вспышка — ракетницей (Flare._owner).
         private static Thing Origin(Thing t)
         {
             for (int i = 0; i < 8 && t != null; i++)
@@ -476,16 +432,13 @@ namespace DuckBots
             return t;
         }
 
-        // Стрелок — тот, кто держит ствол или держал его последним (responsibleProfile).
         private static string OwnerOf(Thing src, Duck d)
         {
             Profile p = src == null ? null : src.responsibleProfile;
             return p == null ? null : p == d.profile ? "сам" : WhoIs(p);
         }
 
-        // Тип смерти игра передаёт только в Duck.Kill — ловим его там, а пишем,
-        // когда журнал увидит утку мёртвой. Kill зовут и для неуязвимой утки,
-        // поэтому запоминаем только убийство, после которого она мертва.
+        // Kill зовут и для неуязвимой утки: запоминаем только убийство, после которого она мертва.
         public static void OnKilled(Duck d, DestroyType type)
         {
             MoveTracer tr;
@@ -500,9 +453,7 @@ namespace DuckBots
             return "игрок";
         }
 
-        // Имя карты. GameLevel.displayName в первом кадре раунда бросает
-        // NullReferenceException — данные уровня ещё не загружены, — поэтому читаем
-        // его поздно и осторожно: при сводке, когда раунд уже отыгран.
+        // displayName в первом кадре раунда бросает NullReferenceException: данные уровня ещё не загружены.
         private static string MapName(Level lvl)
         {
             GameLevel gl = lvl as GameLevel;
@@ -515,8 +466,6 @@ namespace DuckBots
             catch (Exception) { return "?"; }
         }
 
-        // Сводка раунда — по ней меряется, стало ли лучше: промахи, срабатывания
-        // сторожа, смерти ботов и сколько из них — в пропасть.
         private static void RoundSummary()
         {
             if (!(_traceLevel is GameLevel)) return;
@@ -531,22 +480,16 @@ namespace DuckBots
             _watchdogFired = _botDeaths = _botFalls = _botDrops = 0;
         }
 
-        // Что говорит маршрут прямо сейчас — по этой строке видно, работает ли граф
-        // вообще и почему бот пошёл именно туда.
         private static string RouteWord(BotView v)
         {
             bool routed = v.hasPickupStep || v.hasEnemyStep;
             if (!routed) return "нет";
             bool pick = v.hasPickupStep;
             int edge = pick ? v.pickupStepEdge : v.enemyStepEdge;
-            // Куда именно ведёт шаг — без этого по логу не понять, почему бот
-            // прыгает на месте: цель шага могла быть ровно над ним или под ним.
             return EdgeName(edge) + "(" + (int)(pick ? v.pickupStepX : v.enemyStepX)
                 + "," + (int)(pick ? v.pickupStepY : v.enemyStepY) + ")";
         }
 
-        // Строка состояния раз в секунду: что бот видит и почему делает то, что делает.
-        // В подробный журнал — основной держит только события и смены решений.
         private static void LogBrain()
         {
             for (int i = 0; i < bots.Count; i++)
@@ -564,7 +507,6 @@ namespace DuckBots
             }
         }
 
-        // Обстановка бота числами — к каждой строке про решение.
         private static string Context(Bot b, Duck d)
         {
             BotView v = b.view;
