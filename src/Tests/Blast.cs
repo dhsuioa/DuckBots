@@ -4,10 +4,10 @@ namespace DuckBots
 {
     public static partial class BotBrain
     {
-        // Взрывчатка в руках: вплотную не стрелять — взрыв достаёт самого стрелка.
+        // Взрывчатка в руках: вплотную не стрелять — взрыв достаёт стрелка.
         private static string BlastTest()
         {
-            // --- базука, враг в 30 пикселях: не стрелять, отходить лицом к врагу ---
+            // Базука вплотную: отходить лицом к врагу.
             BotView v = new BotView();
             BotState s = new BotState();
             v.hasEnemy = true; v.ex = 30f; v.canShoot = true; v.holding = 1; v.blastInHand = true;
@@ -21,7 +21,7 @@ namespace DuckBots
             }
             if (s.why != WhyBlastBack) return "причина: отход со взрывчаткой записан как «" + s.why + "»";
 
-            // --- сзади пропасть: стоять и не стрелять ---
+            // Сзади пропасть: стоять и не стрелять.
             v.gapLeft = true; v.abyssLeft = true; s = new BotState();
             for (int i = 0; i < 20; i++)
             {
@@ -30,7 +30,7 @@ namespace DuckBots
                 if ((m & BotInput.LEFT) != 0) return "взрывчатка: отходит в пропасть";
             }
 
-            // --- на безопасной дистанции стреляет как обычно ---
+            // На безопасной дистанции стреляет.
             v = new BotView(); s = new BotState();
             v.hasEnemy = true; v.ex = BlastSafe + 20f; v.canShoot = true; v.holding = 1; v.blastInHand = true;
             v.facingRight = true; v.grounded = true;
@@ -38,14 +38,14 @@ namespace DuckBots
             for (int i = 0; i < 20; i++) if ((Decide(ref v, ref s) & BotInput.SHOOT) != 0) shot = true;
             if (!shot) return "взрывчатка: издалека не стреляет";
 
-            // --- враг над головой близко: взмахами тоже не стрелять ---
+            // Враг над головой близко: вверх тоже не стрелять.
             v = new BotView(); s = new BotState();
             v.hasEnemy = true; v.ex = 4f; v.ey = -40f; v.canShootUp = true; v.holding = 1; v.blastInHand = true;
             v.facingRight = true; v.grounded = true;
             for (int i = 0; i < 20; i++)
                 if ((Decide(ref v, ref s) & BotInput.SHOOT) != 0) return "взрывчатка: стреляет вверх в упор";
 
-            // --- обычный ствол вплотную стреляет, как раньше ---
+            // Обычный ствол вплотную стреляет.
             v = new BotView(); s = new BotState();
             v.hasEnemy = true; v.ex = 30f; v.canShoot = true; v.holding = 1;
             v.facingRight = true; v.grounded = true;
@@ -53,8 +53,7 @@ namespace DuckBots
             for (int i = 0; i < 20; i++) if ((Decide(ref v, ref s) & BotInput.SHOOT) != 0) shot = true;
             if (!shot) return "взрывчатка: обычный ствол вплотную перестал стрелять";
 
-            // --- обычный ствол ближе KeepDist: отходит лицом к врагу и стреляет ---
-            // Без STRAFE шаг назад разворачивал утку спиной, и бот крутился на месте.
+            // Обычный ствол ближе KeepDist: отходит лицом к врагу и стреляет.
             v = new BotView(); s = new BotState();
             v.hasEnemy = true; v.ex = 10f; v.canShoot = true; v.holding = 1;
             v.facingRight = true; v.grounded = true;

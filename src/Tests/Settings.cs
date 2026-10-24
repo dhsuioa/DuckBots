@@ -4,8 +4,7 @@ namespace DuckBots
 {
     public static partial class BotBrain
     {
-        // Файл настроек ботов правят руками: кривая строка не должна ни уронить мод,
-        // ни посадить в слот бота, которого никто не включал.
+        // bots.txt правят руками: кривая строка не роняет мод и не сажает бота.
         private static string SettingsTest()
         {
             int[] l = BotSettings.Parse("2, 0,4,1");

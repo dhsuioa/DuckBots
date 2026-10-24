@@ -4,14 +4,11 @@ namespace DuckBots
 {
     public static partial class BotBrain
     {
-        // Опора, которой не видит карта: выступ Nubber торчит из тайла на несколько пикселей,
-        // а карта размечает клетку по центру и считает её пустой. Бот стоит на выступе,
-        // шаг маршрута — ровно под ним, «на месте». 20.10 на forest04_8 бот так простоял
-        // 30 секунд, и сторож сработал семь раз подряд. Надо сойти туда, где опоры нет.
+        // Шаг маршрута ровно под ногами на опоре, которой нет на карте: сойти туда, где обрыв, но не в пропасть.
         private static string StepOffTest()
         {
             ushort m;
-            // Слева обрыв, справа тайл: сойти влево.
+            // Слева обрыв: влево.
             BotView v = StepOffView(true, false, false, false);
             BotState s = new BotState();
             m = Decide(ref v, ref s);
@@ -25,7 +22,7 @@ namespace DuckBots
             m = Decide(ref v, ref s);
             if ((m & BotInput.RIGHT) == 0) return "сход с опоры: справа обрыв, а бот не идёт вправо";
 
-            // Обрыв с обеих сторон, слева пропасть: только вправо — и так кадр за кадром.
+            // Обрыв с обеих сторон, слева пропасть: только вправо, кадр за кадром.
             v = StepOffView(true, true, true, false);
             s = new BotState();
             for (int f = 0; f < WanderFrames * 3; f++)

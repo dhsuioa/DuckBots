@@ -4,12 +4,10 @@ namespace DuckBots
 {
     public static partial class BotBrain
     {
-        // Подкат от выстрела: разгон, подкат, лежать, пока целятся, и встать. Враг справа,
-        // в 100 пикселях; прогонка той же физикой, что у игры, только пригнувшаяся утка
-        // не разгоняется, а подкат держится, пока зажат DOWN, — как в Duck.UpdateMove.
+        // Подкат от прицела врага справа, прогонка физикой игры.
         private static string DodgeTest()
         {
-            // --- бежим, в нас целятся: через DodgeDelay кадров — DOWN ---
+            // Бежим, в нас целятся: через DodgeDelay кадров — DOWN.
             SimDuck d = new SimDuck();
             d.grounded = true;
             d.hs = 2f;
@@ -27,7 +25,7 @@ namespace DuckBots
                 if (s.how != HowDodge) return "причина: подкат записан как «" + s.how + "»";
             }
 
-            // --- стоим: сначала разгон, DOWN только после |hs| > 1 ---
+            // Стоим: сначала разгон, DOWN только при |hs| > 1.
             d = new SimDuck();
             d.grounded = true;
             sliding = false;
@@ -51,9 +49,7 @@ namespace DuckBots
             }
             if (!ran || !slid) return "подкат: стоя под прицелом, бот не разогнался и не лёг";
 
-            // --- лежит, пока целятся; перестали — лежит ещё DodgeAfter и встаёт ---
-            // Лёжа бот стоит на месте, и MoveTo через дюжину кадров считал его застрявшим
-            // и прыгал — JUMP поднимает утку прямо под пулю.
+            // Лежит, пока целятся, и не прыгает; перестали — лежит ещё DodgeAfter.
             for (int f = 0; f < 30; f++)
             {
                 ushort m = DodgeFrame(ref d, ref sliding, ref facing, ref s, true, false, false);
@@ -66,7 +62,7 @@ namespace DuckBots
             if (up < 0) return "подкат: целиться перестали, а бот так и лежит";
             if (up < DodgeAfter - 1) return "подкат: встаёт через " + up + " кадр. — выстрел мог ещё лететь";
 
-            // --- дольше DodgeMax не лежит, потом DodgeRest не ложится ---
+            // Дольше DodgeMax не лежит, потом DodgeRest не ложится.
             d = new SimDuck();
             d.grounded = true;
             d.hs = 2f;
@@ -91,9 +87,7 @@ namespace DuckBots
             }
             if (rest < 0) return "подкат: под прицелом лежит бесконечно";
 
-            // --- разгон туда, куда уже едем: катится влево, маршрут зовёт вправо ---
-            // Разворот съедает 5–6 кадров, а подкат можно начать в своей же стороне:
-            // 28.09 так гибли в разгоне боты, у которых маршрут только что сменился.
+            // Разгон туда, куда уже катится: разворот съел бы кадры.
             d = new SimDuck();
             d.grounded = true;
             d.hs = -0.6f;
@@ -104,9 +98,7 @@ namespace DuckBots
             if ((first & BotInput.RIGHT) != 0) return "подкат: катится влево, а разгоняется вправо — теряет кадры на разворот";
             if ((first & BotInput.LEFT) == 0) return "подкат: катится влево и не разгоняется дальше влево";
 
-            // --- разгон не в пропасть: справа обрыв — разгон влево ---
-            // Бот на позиции для выстрела стоит и никуда не идёт; разгон по умолчанию —
-            // к стрелку, но там пропасть.
+            // Разгон не в пропасть.
             d = new SimDuck();
             d.grounded = true;
             sliding = false;
@@ -122,7 +114,7 @@ namespace DuckBots
             return null;
         }
 
-        // Один кадр под прицелом врага справа: обстановка, решение, физика.
+        // Кадр под прицелом: обстановка, решение, физика. Пригнувшись, утка не разгоняется, подкат держится, пока зажат DOWN.
         private static ushort DodgeFrame(ref SimDuck d, ref bool sliding, ref int facing, ref BotState s,
                                          bool threat, bool atSpot, bool abyssRight)
         {
@@ -139,7 +131,7 @@ namespace DuckBots
             if (!down) sliding = false;
             int dir = (m & BotInput.RIGHT) != 0 ? 1 : ((m & BotInput.LEFT) != 0 ? -1 : 0);
             if (dir != 0) facing = dir;
-            DuckPhysics.Controls(ref d, down ? 0 : dir, false);   // пригнувшись, не разгоняется
+            DuckPhysics.Controls(ref d, down ? 0 : dir, false);
             return m;
         }
     }

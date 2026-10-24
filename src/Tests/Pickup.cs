@@ -4,7 +4,7 @@ namespace DuckBots
 {
     public static partial class BotBrain
     {
-        // Выбор цели подбора: ящик в одном ряду со стволом, но с надбавкой за удар и лотерею.
+        // Цель подбора: ящик в одном ряду со стволом, но дальше на BoxExtra.
         private static string PickupTest()
         {
             if (!BetterPickup(KindBox, 100f, KindGun, 300f))
@@ -22,8 +22,7 @@ namespace DuckBots
             return null;
         }
 
-        // Дальность выстрела по патрону: снайперка бьёт далеко, дробовик — близко, неточный
-        // ствол ограничен разбросом, дуга пока не считается.
+        // Дальность по патрону: точный бьёт далеко, неточный ограничен разбросом, дуге — RangeX.
         private static string ReachTest()
         {
             float r = FireReach(1000f, 0f, 1f, false);
